@@ -20,7 +20,7 @@
 .thinking {
   padding: 0 24px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-faint);
   margin-bottom: 12px;
 }
 
@@ -37,7 +37,7 @@
   max-width: 70%;
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--bubble-bg);
   font-size: 14px;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -45,21 +45,21 @@
 }
 
 .message.user .bubble {
-  background: rgba(77, 153, 255, 0.45);
+  background: var(--bubble-user-bg);
 }
 
 .item-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 8px 12px;
   margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--bg-surface-muted);
+  color: var(--text-primary);
 }
 
 .item-card.review {
-  border-color: rgba(255, 144, 200, 0.35);
-  background: rgba(255, 144, 200, 0.1);
+  border-color: var(--review-border);
+  background: var(--review-bg);
 }
 
 .review-header {
@@ -72,7 +72,7 @@
 }
 
 .review-title {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .review-badge {
@@ -81,18 +81,18 @@
   letter-spacing: 0.08em;
   padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.75);
+  background: var(--bg-surface-strong);
+  color: var(--text-secondary);
 }
 
 .review-badge.active {
-  background: rgba(255, 144, 200, 0.18);
-  color: rgba(255, 195, 226, 0.95);
+  background: var(--review-active-bg);
+  color: var(--review-active-text);
 }
 
 .review-badge.done {
-  background: rgba(120, 255, 200, 0.18);
-  color: rgba(170, 255, 220, 0.95);
+  background: var(--review-done-bg);
+  color: var(--review-done-text);
 }
 
 .item-card summary {
@@ -115,13 +115,13 @@
 
 .item-chevron {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
   transition: transform 0.2s ease;
 }
 
 .item-card[open] .item-chevron {
   transform: rotate(90deg);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 .item-card summary::-webkit-details-marker {
@@ -137,7 +137,7 @@
 
 .item-status {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -148,7 +148,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   min-width: 0;
 }
 
@@ -163,26 +163,26 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-secondary);
 }
 
 .file-change-kind {
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-faint);
 }
 
 .file-change-path {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
 }
 
 .item-output {
-  background: rgba(10, 12, 18, 0.7);
+  background: var(--code-bg);
   border-radius: 8px;
   padding: 8px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--code-text);
   margin: 0;
   max-width: 100%;
   overflow-x: auto;

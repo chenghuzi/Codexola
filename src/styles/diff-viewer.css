@@ -11,14 +11,14 @@
 
 .diff-viewer-item {
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 14, 20, 0.32);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-muted);
   padding: 10px 12px;
 }
 
 .diff-viewer-item.active {
-  border-color: rgba(100, 200, 255, 0.6);
-  box-shadow: 0 0 0 1px rgba(100, 200, 255, 0.2);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
 .diff-viewer-header {
@@ -26,7 +26,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -35,12 +35,12 @@
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
 }
 
 .diff-viewer-path {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
   word-break: break-word;
 }
 
@@ -49,11 +49,11 @@
 }
 
 .diff-viewer-output {
-  background: rgba(10, 12, 18, 0.7);
+  background: var(--code-bg);
   border-radius: 8px;
   padding: 8px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--code-text);
   font-family: "SFMono-Regular", "Menlo", "Monaco", monospace;
   max-width: 100%;
   overflow-x: auto;
@@ -73,7 +73,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-faint);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -89,35 +89,35 @@
 }
 
 .diff-line-hunk {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--bg-surface-faint);
+  color: var(--text-secondary);
 }
 
 .diff-line-hunk .diff-gutter {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
 }
 
 .diff-line-add {
-  background: rgba(46, 160, 67, 0.25);
+  background: var(--success-soft);
 }
 
 .diff-line-del {
-  background: rgba(248, 81, 73, 0.25);
+  background: var(--danger-soft);
 }
 
 .diff-line-meta {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
 }
 
 .diff-line-content .token.comment,
 .diff-line-content .token.prolog,
 .diff-line-content .token.doctype,
 .diff-line-content .token.cdata {
-  color: rgba(164, 195, 255, 0.7);
+  color: var(--token-comment);
 }
 
 .diff-line-content .token.punctuation {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--token-punctuation);
 }
 
 .diff-line-content .token.property,
@@ -125,12 +125,12 @@
 .diff-line-content .token.constant,
 .diff-line-content .token.symbol,
 .diff-line-content .token.deleted {
-  color: #ff8f8f;
+  color: var(--token-property);
 }
 
 .diff-line-content .token.boolean,
 .diff-line-content .token.number {
-  color: #ffca7a;
+  color: var(--token-number);
 }
 
 .diff-line-content .token.selector,
@@ -139,36 +139,36 @@
 .diff-line-content .token.char,
 .diff-line-content .token.builtin,
 .diff-line-content .token.inserted {
-  color: #9ae6b4;
+  color: var(--token-string);
 }
 
 .diff-line-content .token.operator,
 .diff-line-content .token.entity,
 .diff-line-content .token.url,
 .diff-line-content .token.variable {
-  color: #9fc2ff;
+  color: var(--token-operator);
 }
 
 .diff-line-content .token.atrule,
 .diff-line-content .token.attr-value,
 .diff-line-content .token.keyword {
-  color: #b8a6ff;
+  color: var(--token-keyword);
 }
 
 .diff-line-content .token.function,
 .diff-line-content .token.class-name {
-  color: #7fd1ff;
+  color: var(--token-function);
 }
 
 .diff-viewer-placeholder,
 .diff-viewer-empty {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   font-size: 12px;
   padding: 8px 0;
 }
 
 .diff-viewer-loading {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
   font-size: 11px;
   padding: 6px 0;
 }

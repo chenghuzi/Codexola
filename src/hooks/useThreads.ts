@@ -832,6 +832,7 @@ export function useThreads({
       },
       onTurnCompleted: (_workspaceId: string, threadId: string) => {
         dispatch({ type: "markProcessing", threadId, isProcessing: false });
+        dispatch({ type: "markReviewing", threadId, isReviewing: false });
       },
     }),
     [

@@ -4,8 +4,8 @@
   gap: 8px;
   -webkit-app-region: no-drag;
   padding: 12px 32px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 14, 20, 0.45);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-composer);
   grid-column: 1;
   grid-row: 3;
 }
@@ -35,8 +35,8 @@
 
 .composer-send {
   border: none;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--bg-surface-strong);
+  color: var(--text-secondary);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -44,8 +44,8 @@
 }
 
 .composer-send:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .composer.is-disabled {
@@ -55,19 +55,19 @@
 .composer textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-faint);
 }
 
 .composer-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.45);
+  background: var(--bg-surface-faint);
+  color: var(--text-faint);
 }
 
 .composer-select:disabled {
   cursor: not-allowed;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-faint);
   background-image: none;
 }
 
@@ -75,7 +75,7 @@
   display: flex;
   align-items: center;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .composer-meta {
@@ -91,7 +91,7 @@
   gap: 6px;
   padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-surface-muted);
   width: max-content;
 }
 
@@ -99,7 +99,7 @@
   display: inline-flex;
   width: 14px;
   height: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .composer-icon svg {
@@ -111,7 +111,7 @@
   appearance: none;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 2px 12px 2px 0;
   cursor: pointer;
@@ -120,8 +120,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background-image: linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.6) 50%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.6) 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, var(--select-arrow) 50%),
+    linear-gradient(135deg, var(--select-arrow) 50%, transparent 50%);
   background-position: calc(100% - 6px) calc(50% + 1px),
     calc(100% - 2px) calc(50% + 1px);
   background-size: 5px 5px, 5px 5px;
@@ -150,5 +150,5 @@
 
 .composer-select:focus {
   outline: none;
-  color: #fff;
+  color: var(--text-primary);
 }
