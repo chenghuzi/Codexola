@@ -21,6 +21,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
 }
 
 .composer-attachments {
@@ -85,6 +86,65 @@
 
 .composer textarea:focus {
   outline: none;
+}
+
+.composer-slash-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 10;
+  padding: 6px;
+}
+
+.composer-slash-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-slash-item.is-active,
+.composer-slash-item:hover {
+  background: var(--bg-surface-strong);
+}
+
+.composer-slash-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.composer-slash-description {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.composer-slash-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.composer-slash-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 
 .composer-send {

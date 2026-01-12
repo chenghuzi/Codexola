@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import "./styles/base.css";
 import "./styles/buttons.css";
@@ -29,12 +29,15 @@ import { useGitStatus } from "./hooks/useGitStatus";
 import { useGitDiffs } from "./hooks/useGitDiffs";
 import { useModels } from "./hooks/useModels";
 import { useSkills } from "./hooks/useSkills";
+import { usePrompts } from "./hooks/usePrompts";
 import { useDebugLog } from "./hooks/useDebugLog";
 import { useWorkspaceRefreshOnFocus } from "./hooks/useWorkspaceRefreshOnFocus";
 import { useWorkspaceRestore } from "./hooks/useWorkspaceRestore";
 import { Settings } from "./components/Settings";
 import { useSettings } from "./hooks/useSettings";
-import { confirmQuit, saveAttachment } from "./services/tauri";
+import { confirmQuit, readPrompt, saveAttachment } from "./services/tauri";
+import { buildPromptSlashItems } from "./utils/slash";
+import { expandPromptTemplate, parsePromptInvocation } from "./utils/prompts";
 import type { AccessMode, ComposerAttachment } from "./types";
 
 type MainAppProps = {
@@ -85,6 +88,8 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
     setSelectedEffort,
   } = useModels({ activeWorkspace, onDebug: addDebugEntry });
   const { skills } = useSkills({ activeWorkspace, onDebug: addDebugEntry });
+  const { prompts } = usePrompts({ onDebug: addDebugEntry });
+  const slashItems = useMemo(() => buildPromptSlashItems(prompts), [prompts]);
 
   const resolvedModel = selectedModel?.model ?? null;
   const fileStatus =
@@ -304,8 +309,24 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
       await startReview(trimmed);
       return;
     }
+    let messageText = trimmed;
+    const invocation = parsePromptInvocation(messageText);
+    if (invocation) {
+      try {
+        const promptFile = await readPrompt(invocation.name);
+        messageText = expandPromptTemplate(promptFile.body, invocation);
+      } catch (error) {
+        addDebugEntry({
+          id: `${Date.now()}-prompt-expand-error`,
+          timestamp: Date.now(),
+          source: "error",
+          label: "prompt/expand error",
+          payload: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     await sendUserMessage(
-      trimmed,
+      messageText,
       nextAttachments.map((attachment) => ({ path: attachment.path })),
     );
     clearAttachments();
@@ -475,6 +496,7 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
                 accessMode={accessMode}
                 onSelectAccessMode={onAccessModeChange}
                 skills={skills}
+                slashItems={slashItems}
               />
             )}
             <DebugPanel

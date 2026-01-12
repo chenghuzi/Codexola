@@ -110,6 +110,29 @@ export type SkillOption = {
   description?: string;
 };
 
+export type PromptOption = {
+  name: string;
+  path: string;
+  description?: string;
+  argumentHint?: string;
+};
+
+export type PromptFile = {
+  name: string;
+  body: string;
+  description?: string;
+  argumentHint?: string;
+};
+
+export type SlashItem = {
+  id: string;
+  kind: "prompt";
+  title: string;
+  description?: string;
+  hint?: string;
+  insertText: string;
+};
+
 export type DebugEntry = {
   id: string;
   timestamp: number;

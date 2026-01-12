@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
+use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -31,6 +33,30 @@ struct GitFileDiff {
 #[derive(Debug, Deserialize, Clone)]
 struct LocalImageInput {
     path: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct PromptListItem {
+    name: String,
+    path: String,
+    description: Option<String>,
+    argument_hint: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct PromptFile {
+    name: String,
+    body: String,
+    description: Option<String>,
+    argument_hint: Option<String>,
+}
+
+#[derive(Default)]
+struct PromptFrontMatter {
+    description: Option<String>,
+    argument_hint: Option<String>,
 }
 
 fn normalize_git_path(path: &str) -> String {
@@ -78,6 +104,84 @@ fn diff_patch_to_string(patch: &mut git2::Patch) -> Result<String, git2::Error> 
         .as_str()
         .map(|value| value.to_string())
         .unwrap_or_else(|| String::from_utf8_lossy(&buf).to_string()))
+}
+
+fn prompts_dir() -> Option<PathBuf> {
+    if let Ok(value) = env::var("HOME") {
+        if !value.trim().is_empty() {
+            return Some(PathBuf::from(value).join(".codex").join("prompts"));
+        }
+    }
+    if let Ok(value) = env::var("USERPROFILE") {
+        if !value.trim().is_empty() {
+            return Some(PathBuf::from(value).join(".codex").join("prompts"));
+        }
+    }
+    None
+}
+
+fn parse_prompt_file(contents: &str) -> (PromptFrontMatter, String) {
+    let mut front_matter = PromptFrontMatter::default();
+    let mut lines = contents.lines();
+    let first_line = match lines.next() {
+        Some(line) => line.trim_end_matches('\r'),
+        None => return (front_matter, String::new()),
+    };
+    if first_line != "---" {
+        return (front_matter, contents.to_string());
+    }
+
+    let mut front_lines: Vec<String> = Vec::new();
+    let mut body_start: Option<usize> = None;
+    let mut offset = 0usize;
+    for (index, line) in contents.split_inclusive('\n').enumerate() {
+        let trimmed = line.trim_end_matches(&['\r', '\n'][..]);
+        if index == 0 {
+            offset += line.len();
+            continue;
+        }
+        if trimmed == "---" {
+            body_start = Some(offset + line.len());
+            break;
+        }
+        front_lines.push(trimmed.to_string());
+        offset += line.len();
+    }
+
+    if let Some(start) = body_start {
+        for line in front_lines {
+            if let Some((key, value)) = line.split_once(':') {
+                let key = key.trim();
+                let value = parse_prompt_value(value);
+                match key {
+                    "description" => front_matter.description = value,
+                    "argument-hint" | "argument_hint" => {
+                        front_matter.argument_hint = value
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let body = contents.get(start..).unwrap_or_default().to_string();
+        return (front_matter, body);
+    }
+
+    (front_matter, contents.to_string())
+}
+
+fn parse_prompt_value(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let unquoted = if (trimmed.starts_with('"') && trimmed.ends_with('"'))
+        || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
+    {
+        trimmed[1..trimmed.len() - 1].to_string()
+    } else {
+        trimmed.to_string()
+    };
+    Some(unquoted)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -684,6 +788,66 @@ async fn skills_list(
 }
 
 #[tauri::command]
+async fn prompts_list() -> Result<Vec<PromptListItem>, String> {
+    let Some(dir) = prompts_dir() else {
+        return Ok(Vec::new());
+    };
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let entries = fs::read_dir(&dir).map_err(|e| e.to_string())?;
+    let mut items: Vec<PromptListItem> = Vec::new();
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("md") {
+            continue;
+        }
+        let name = match path.file_stem().and_then(|stem| stem.to_str()) {
+            Some(value) if !value.trim().is_empty() => value.to_string(),
+            _ => continue,
+        };
+        let contents = match fs::read_to_string(&path) {
+            Ok(contents) => contents,
+            Err(_) => continue,
+        };
+        let (meta, _body) = parse_prompt_file(&contents);
+        items.push(PromptListItem {
+            name,
+            path: path.to_string_lossy().to_string(),
+            description: meta.description,
+            argument_hint: meta.argument_hint,
+        });
+    }
+    items.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(items)
+}
+
+#[tauri::command]
+async fn prompt_read(name: String) -> Result<PromptFile, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("prompt name is empty".to_string());
+    }
+    if name.contains('/') || name.contains('\\') {
+        return Err("invalid prompt name".to_string());
+    }
+    let dir = prompts_dir().ok_or("prompt directory unavailable")?;
+    let path = dir.join(format!("{name}.md"));
+    let contents = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let (meta, body) = parse_prompt_file(&contents);
+    Ok(PromptFile {
+        name: name.to_string(),
+        body,
+        description: meta.description,
+        argument_hint: meta.argument_hint,
+    })
+}
+
+#[tauri::command]
 async fn respond_to_server_request(
     workspace_id: String,
     request_id: u64,
@@ -1054,6 +1218,8 @@ pub fn run() {
             get_git_diffs,
             model_list,
             skills_list,
+            prompts_list,
+            prompt_read,
             get_settings,
             update_settings,
             confirm_quit

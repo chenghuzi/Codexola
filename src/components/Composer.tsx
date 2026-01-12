@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent, DragEvent } from "react";
-import type { ComposerAttachment } from "../types";
+import type { ComposerAttachment, SlashItem } from "../types";
+import { SlashMenu } from "./SlashMenu";
+import { filterSlashItems } from "../utils/slash";
 
 type ComposerProps = {
   onSend: (text: string, attachments: ComposerAttachment[]) => void;
@@ -18,6 +20,7 @@ type ComposerProps = {
   accessMode: "read-only" | "current" | "full-access";
   onSelectAccessMode: (mode: "read-only" | "current" | "full-access") => void;
   skills: { name: string; description?: string }[];
+  slashItems: SlashItem[];
 };
 
 export function Composer({
@@ -36,12 +39,48 @@ export function Composer({
   accessMode,
   onSelectAccessMode,
   skills,
+  slashItems,
 }: ComposerProps) {
   const [text, setText] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const canSend = useMemo(
     () => !disabled && !isSavingAttachments && (!!text.trim() || attachments.length > 0),
     [attachments.length, disabled, isSavingAttachments, text],
   );
+  const slashQuery = useMemo(() => {
+    if (!text.startsWith("/")) {
+      return null;
+    }
+    if (text.includes("\n")) {
+      return null;
+    }
+    const query = text.slice(1);
+    if (query.includes(" ")) {
+      return null;
+    }
+    return query;
+  }, [text]);
+  const isSlashOpen = Boolean(slashQuery !== null && !disabled);
+  const filteredSlashItems = useMemo(() => {
+    if (!isSlashOpen || slashQuery === null) {
+      return [];
+    }
+    return filterSlashItems(slashItems, slashQuery);
+  }, [isSlashOpen, slashItems, slashQuery]);
+
+  useEffect(() => {
+    if (!isSlashOpen) {
+      setSlashIndex(0);
+      return;
+    }
+    setSlashIndex((prev) => {
+      if (filteredSlashItems.length === 0) {
+        return 0;
+      }
+      return Math.min(prev, filteredSlashItems.length - 1);
+    });
+  }, [filteredSlashItems.length, isSlashOpen, slashQuery]);
 
   const handleSend = useCallback(() => {
     if (!canSend) {
@@ -50,6 +89,14 @@ export function Composer({
     onSend(text, attachments);
     setText("");
   }, [attachments, canSend, onSend, text]);
+
+  const handleSelectSlashItem = useCallback((item: SlashItem) => {
+    setText(item.insertText);
+    setSlashIndex(0);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, []);
 
   const handlePaste = useCallback(
     (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -134,6 +181,7 @@ export function Composer({
             onPaste={handlePaste}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            ref={textareaRef}
             onKeyDown={(event) => {
               if (disabled) {
                 return;
@@ -141,9 +189,49 @@ export function Composer({
               if (event.key === "Enter" && event.metaKey) {
                 event.preventDefault();
                 handleSend();
+                return;
+              }
+              if (isSlashOpen) {
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  if (filteredSlashItems.length > 0) {
+                    setSlashIndex((prev) =>
+                      (prev + 1) % filteredSlashItems.length,
+                    );
+                  }
+                  return;
+                }
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  if (filteredSlashItems.length > 0) {
+                    setSlashIndex((prev) =>
+                      (prev - 1 + filteredSlashItems.length) %
+                      filteredSlashItems.length,
+                    );
+                  }
+                  return;
+                }
+                if (event.key === "Enter") {
+                  if (filteredSlashItems.length > 0) {
+                    event.preventDefault();
+                    handleSelectSlashItem(filteredSlashItems[slashIndex]);
+                  }
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setText("");
+                }
               }
             }}
           />
+          {isSlashOpen && (
+            <SlashMenu
+              items={filteredSlashItems}
+              selectedIndex={slashIndex}
+              onSelect={handleSelectSlashItem}
+              onHover={(index) => setSlashIndex(index)}
+            />
+          )}
           {attachments.length > 0 && (
             <div className="composer-attachments">
               {attachments.map((attachment) => (

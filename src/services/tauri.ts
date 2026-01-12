@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { AppSettings, LocalImageInput, WorkspaceInfo } from "../types";
 import type { GitFileDiff, GitFileStatus, ReviewTarget } from "../types";
+import type { PromptFile, PromptOption } from "../types";
 
 export async function pickWorkspacePath(): Promise<string | null> {
   const selection = await open({ directory: true, multiple: false });
@@ -110,6 +111,14 @@ export async function getModelList(workspaceId: string) {
 
 export async function getSkillsList(workspaceId: string) {
   return invoke<any>("skills_list", { workspaceId });
+}
+
+export async function getPromptsList(): Promise<PromptOption[]> {
+  return invoke<PromptOption[]>("prompts_list");
+}
+
+export async function readPrompt(name: string): Promise<PromptFile> {
+  return invoke<PromptFile>("prompt_read", { name });
 }
 
 export async function listThreads(
