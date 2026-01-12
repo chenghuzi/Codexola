@@ -1,12 +1,12 @@
 # Codexia
 
+*In Codex (gpt-5.2-codex xhigh) we trust — so we build a GUI it deserves.*
+
 Forked from https://github.com/Dimillian/CodexMonitor.git (MIT License). 本项目已发生分叉并产生差异。
 
 [English](README.md) | [中文](README.zh.md)
 
 ![Codexia](screenshot.png)
-
-*我们信任 Codex——并打造它应得的 GUI 工具。*
 
 Codexia 是一款 macOS Tauri 应用，用于在本地工作区编排多个 Codex agent。它提供侧边栏管理项目、主页快捷入口，以及基于 Codex app-server 协议的对话视图。
 
