@@ -881,8 +881,6 @@ fn insert_preferences_menu_item<R: tauri::Runtime>(
     app: &AppHandle<R>,
     menu: &Menu<R>,
 ) -> tauri::Result<()> {
-    let preferences_item =
-        MenuItem::with_id(app, "preferences", "Preferences...", true, Some("CmdOrCtrl+,"))?;
     let app_name = app.package_info().name.clone();
     let submenu = menu.items()?.into_iter().find_map(|item| match item {
         MenuItemKind::Submenu(submenu) => match submenu.text() {
@@ -892,7 +890,47 @@ fn insert_preferences_menu_item<R: tauri::Runtime>(
         _ => None,
     });
     if let Some(submenu) = submenu {
+        let preferences_item =
+            MenuItem::with_id(app, "preferences", "Preferences...", true, Some("CmdOrCtrl+,"))?;
         submenu.insert(&preferences_item, 1)?;
+        let items = submenu.items()?;
+        let mut quit_index = None;
+        let mut quit_label = None;
+        for (index, item) in items.iter().enumerate() {
+            if let Some(predefined) = item.as_predefined_menuitem() {
+                if let Ok(text) = predefined.text() {
+                    if text == format!("Quit {}", app_name) {
+                        quit_index = Some(index);
+                        quit_label = Some(text);
+                        break;
+                    }
+                }
+            }
+        }
+        if quit_index.is_none() {
+            for index in (0..items.len()).rev() {
+                let item = &items[index];
+                if let Some(predefined) = item.as_predefined_menuitem() {
+                    if let Ok(text) = predefined.text() {
+                        quit_index = Some(index);
+                        quit_label = Some(text);
+                        break;
+                    }
+                }
+            }
+        }
+        if let Some(index) = quit_index {
+            let _ = submenu.remove_at(index);
+            let quit_label = quit_label.unwrap_or_else(|| format!("Quit {}", app_name));
+            let quit_item = MenuItem::with_id(
+                app,
+                "quit",
+                quit_label,
+                true,
+                Some("CmdOrCtrl+Q"),
+            )?;
+            submenu.insert(&quit_item, index)?;
+        }
     }
     Ok(())
 }
@@ -918,6 +956,33 @@ fn open_settings_window<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<(), Str
         .map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn should_confirm_quit(state: &AppState) -> bool {
+    if state.allow_quit.load(Ordering::SeqCst) {
+        return false;
+    }
+    let settings = tauri::async_runtime::block_on(async { state.settings.lock().await.clone() });
+    settings.confirm_before_quit
+}
+
+fn emit_confirm_quit<R: tauri::Runtime>(app: &AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        let _ = window.emit("confirm-quit", ());
+    } else {
+        let _ = app.emit("confirm-quit", ());
+    }
+}
+
+fn handle_quit_request<R: tauri::Runtime>(app: &AppHandle<R>) {
+    let state = app.state::<AppState>();
+    if should_confirm_quit(&state) {
+        emit_confirm_quit(app);
+    } else {
+        app.exit(0);
+    }
 }
 
 #[tauri::command]
@@ -961,6 +1026,9 @@ pub fn run() {
             if event.id() == "preferences" {
                 let _ = open_settings_window(app);
             }
+            if event.id() == "quit" {
+                handle_quit_request(app);
+            }
         })
         .setup(|app| {
             let state = AppState::load(&app.handle());
@@ -993,24 +1061,24 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
+            let state = app_handle.state::<AppState>();
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
-                let state = app_handle.state::<AppState>();
-                if state.allow_quit.load(Ordering::SeqCst) {
+                if should_confirm_quit(&state) {
+                    api.prevent_exit();
+                    emit_confirm_quit(&app_handle);
+                }
+                return;
+            }
+
+            if let tauri::RunEvent::WindowEvent { label, event, .. } = event {
+                if label != "main" {
                     return;
                 }
-                let settings = tauri::async_runtime::block_on(async {
-                    state.settings.lock().await.clone()
-                });
-                if !settings.confirm_before_quit {
-                    return;
-                }
-                api.prevent_exit();
-                if let Some(window) = app_handle.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    let _ = window.emit("confirm-quit", ());
-                } else {
-                    let _ = app_handle.emit("confirm-quit", ());
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    if should_confirm_quit(&state) {
+                        api.prevent_close();
+                        emit_confirm_quit(&app_handle);
+                    }
                 }
             }
         });
