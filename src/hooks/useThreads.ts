@@ -6,6 +6,7 @@ import {
 } from "@tauri-apps/plugin-notification";
 import type {
   ApprovalRequest,
+  AppServerEvent,
   ConversationItem,
   DebugEntry,
   LocalImageInput,
@@ -29,6 +30,8 @@ import { useAppServerEvents } from "./useAppServerEvents";
 
 const emptyItems: Record<string, ConversationItem[]> = {};
 const DEFAULT_SESSION_STORE_VERSION = 1;
+type MessageItem = Extract<ConversationItem, { kind: "message" }>;
+type ToolItem = Extract<ConversationItem, { kind: "tool" }>;
 
 function createSessionStore(): WorkspaceSessionStore {
   return { version: DEFAULT_SESSION_STORE_VERSION, sessions: {} };
@@ -274,12 +277,13 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
     case "appendAgentDelta": {
       const list = [...(state.itemsByThread[action.threadId] ?? [])];
       const index = list.findIndex((msg) => msg.id === action.itemId);
-      if (index >= 0 && list[index].kind === "message") {
-        const existing = list[index] as ConversationItem;
+      const existing = index >= 0 ? list[index] : null;
+      if (existing && existing.kind === "message") {
+        const message = existing as MessageItem;
         list[index] = {
-          ...existing,
-          text: `${existing.text}${action.delta}`,
-        } as ConversationItem;
+          ...message,
+          text: `${message.text}${action.delta}`,
+        };
       } else {
         list.push({
           id: action.itemId,
@@ -296,12 +300,13 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
     case "completeAgentMessage": {
       const list = [...(state.itemsByThread[action.threadId] ?? [])];
       const index = list.findIndex((msg) => msg.id === action.itemId);
-      if (index >= 0 && list[index].kind === "message") {
-        const existing = list[index] as ConversationItem;
+      const existing = index >= 0 ? list[index] : null;
+      if (existing && existing.kind === "message") {
+        const message = existing as MessageItem;
         list[index] = {
-          ...existing,
-          text: action.text || existing.text,
-        } as ConversationItem;
+          ...message,
+          text: action.text || message.text,
+        };
       } else {
         list.push({
           id: action.itemId,
@@ -386,14 +391,18 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
     case "appendToolOutput": {
       const list = state.itemsByThread[action.threadId] ?? [];
       const index = list.findIndex((entry) => entry.id === action.itemId);
-      if (index < 0 || list[index].kind !== "tool") {
+      if (index < 0) {
         return state;
       }
-      const existing = list[index] as ConversationItem;
-      const updated: ConversationItem = {
-        ...existing,
-        output: `${existing.output ?? ""}${action.delta}`,
-      } as ConversationItem;
+      const existing = list[index];
+      if (existing.kind !== "tool") {
+        return state;
+      }
+      const toolItem = existing as ToolItem;
+      const updated: ToolItem = {
+        ...toolItem,
+        output: `${toolItem.output ?? ""}${action.delta}`,
+      };
       const next = [...list];
       next[index] = updated;
       return {
@@ -700,8 +709,10 @@ function buildItemsFromThread(thread: Record<string, unknown>) {
   const turns = Array.isArray(thread.turns) ? thread.turns : [];
   const items: ConversationItem[] = [];
   turns.forEach((turn) => {
-    const turnItems = Array.isArray((turn as any)?.items) ? (turn as any).items : [];
-    turnItems.forEach((item) => {
+    const turnItems = Array.isArray((turn as Record<string, unknown>)?.items)
+      ? ((turn as Record<string, unknown>).items as Record<string, unknown>[])
+      : [];
+    turnItems.forEach((item: Record<string, unknown>) => {
       const converted = buildConversationItemFromThreadItem(item);
       if (converted) {
         items.push(converted);
@@ -715,8 +726,10 @@ function isReviewingFromThread(thread: Record<string, unknown>) {
   const turns = Array.isArray(thread.turns) ? thread.turns : [];
   let reviewing = false;
   turns.forEach((turn) => {
-    const turnItems = Array.isArray((turn as any)?.items) ? (turn as any).items : [];
-    turnItems.forEach((item) => {
+    const turnItems = Array.isArray((turn as Record<string, unknown>)?.items)
+      ? ((turn as Record<string, unknown>).items as Record<string, unknown>[])
+      : [];
+    turnItems.forEach((item: Record<string, unknown>) => {
       const type = asString((item as Record<string, unknown>)?.type ?? "");
       if (type === "enteredReviewMode") {
         reviewing = true;
@@ -997,7 +1010,7 @@ export function useThreads({
       onApprovalRequest: (approval: ApprovalRequest) => {
         dispatch({ type: "addApproval", approval });
       },
-      onAppServerEvent: (event) => {
+      onAppServerEvent: (event: AppServerEvent) => {
         const method = String(event.message?.method ?? "");
         const inferredSource =
           method === "codex/stderr" ? "stderr" : "event";
@@ -1051,7 +1064,11 @@ export function useThreads({
           // Ignore notification errors.
         }
       },
-      onItemStarted: (workspaceId: string, threadId: string, item) => {
+      onItemStarted: (
+        workspaceId: string,
+        threadId: string,
+        item: Record<string, unknown>,
+      ) => {
         dispatch({ type: "ensureThread", workspaceId, threadId });
         const itemType = asString((item as Record<string, unknown>)?.type ?? "");
         if (itemType === "enteredReviewMode") {
@@ -1070,7 +1087,11 @@ export function useThreads({
           // Ignore refresh errors to avoid breaking the UI.
         }
       },
-      onItemCompleted: (workspaceId: string, threadId: string, item) => {
+      onItemCompleted: (
+        workspaceId: string,
+        threadId: string,
+        item: Record<string, unknown>,
+      ) => {
         dispatch({ type: "ensureThread", workspaceId, threadId });
         const itemType = asString((item as Record<string, unknown>)?.type ?? "");
         if (itemType === "enteredReviewMode") {

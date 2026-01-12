@@ -11,6 +11,15 @@ Forked from https://github.com/Dimillian/CodexMonitor.git (MIT License). This pr
 
 Codexia is a macOS Tauri app for orchestrating multiple Codex agents across local workspaces. It provides a sidebar to manage projects, a home screen for quick actions, and a conversation view backed by the Codex app-server protocol.
 
+## Highlights
+
+- Full Codex configuration (access modes, sandbox/approval bypass, web search toggle).
+- Multi-workspace orchestration across local projects.
+- Thread restore and filtering by workspace `cwd`.
+- Per-workspace thread management (rename, archive/unarchive, copy IDs).
+- Image attachments upload and chat history rendering.
+- Light and dark themes.
+
 ## Features
 
 ### Workspaces & Sessions

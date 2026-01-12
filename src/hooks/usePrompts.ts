@@ -7,6 +7,8 @@ type UsePromptsOptions = {
   enabled?: boolean;
 };
 
+type PromptOptionWire = PromptOption & { argument_hint?: string | null };
+
 export function usePrompts({ onDebug, enabled = true }: UsePromptsOptions) {
   const [prompts, setPrompts] = useState<PromptOption[]>([]);
   const inFlight = useRef(false);
@@ -29,16 +31,19 @@ export function usePrompts({ onDebug, enabled = true }: UsePromptsOptions) {
       const response = await getPromptsList();
       const data = Array.isArray(response) ? response : [];
       const normalized = data
-        .map((item) => ({
-          name: String(item?.name ?? ""),
-          path: String(item?.path ?? ""),
-          description: item?.description ? String(item.description) : undefined,
-          argumentHint: item?.argumentHint
-            ? String(item.argumentHint)
-            : item?.argument_hint
-              ? String(item.argument_hint)
-              : undefined,
-        }))
+        .map((item) => {
+          const raw = item as PromptOptionWire;
+          return {
+            name: String(raw?.name ?? ""),
+            path: String(raw?.path ?? ""),
+            description: raw?.description ? String(raw.description) : undefined,
+            argumentHint: raw?.argumentHint
+              ? String(raw.argumentHint)
+              : raw?.argument_hint
+                ? String(raw.argument_hint)
+                : undefined,
+          };
+        })
         .filter((item) => item.name);
       setPrompts(normalized);
       onDebug?.({

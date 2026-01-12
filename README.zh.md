@@ -10,6 +10,15 @@ Forked from https://github.com/Dimillian/CodexMonitor.git (MIT License). 本项�
 
 Codexia 是一款 macOS Tauri 应用，用于在本地工作区编排多个 Codex agent。它提供侧边栏管理项目、主页快捷入口，以及基于 Codex app-server 协议的对话视图。
 
+## 亮点
+
+- Codex 全量配置（access mode、绕过审批/沙箱、web search 开关等）。
+- 多工作区编排与管理。
+- 线程按工作区 `cwd` 过滤，并支持恢复（resume）。
+- 工作区内线程管理（重命名、归档/取消归档、复制 ID）。
+- 图片附件上传与聊天记录展示。
+- 亮/暗模式。
+
 ## 功能
 
 ### 工作区与会话

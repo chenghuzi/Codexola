@@ -201,6 +201,29 @@ export function Messages({ items, isThinking }: MessagesProps) {
             </div>
           );
         }
+        if (item.kind === "diff") {
+          return (
+            <details key={item.id} className="item-card tool">
+              <summary>
+                <span className="item-summary-left">
+                  <span className="item-chevron" aria-hidden>
+                    ▸
+                  </span>
+                  <span className="item-title">{item.title}</span>
+                </span>
+                {item.status && <span className="item-status">{item.status}</span>}
+              </summary>
+              <div className="item-body">
+                <div className="diff-viewer-output">
+                  <DiffBlock diff={item.diff} language="diff" />
+                </div>
+              </div>
+            </details>
+          );
+        }
+        if (item.kind !== "tool") {
+          return null;
+        }
         const isFileChange = item.toolType === "fileChange";
         return (
           <details
