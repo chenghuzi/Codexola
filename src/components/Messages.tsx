@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { ConversationItem } from "../types";
 import { Markdown } from "./Markdown";
 import { DiffBlock } from "./DiffBlock";
@@ -16,6 +17,19 @@ export function Messages({ items, isThinking }: MessagesProps) {
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
   const maxVisibleItems = 30;
+
+  const attachmentSrc = useMemo(
+    () => (path: string) => {
+      if (!path) {
+        return "";
+      }
+      if (path.startsWith("data:") || path.startsWith("http")) {
+        return path;
+      }
+      return convertFileSrc(path);
+    },
+    [],
+  );
 
   const visibleItems =
     !showAll && items.length > maxVisibleItems
@@ -83,10 +97,30 @@ export function Messages({ items, isThinking }: MessagesProps) {
     >
       {visibleItems.map((item) => {
         if (item.kind === "message") {
+          const attachments = item.attachments ?? [];
           return (
             <div key={item.id} className={`message ${item.role}`}>
               <div className="bubble">
-                <Markdown value={item.text} className="markdown" />
+                {item.text && <Markdown value={item.text} className="markdown" />}
+                {attachments.length > 0 && (
+                  <div className="message-attachments">
+                    {attachments.map((attachment, index) => {
+                      const src = attachmentSrc(attachment.path);
+                      if (!src) {
+                        return null;
+                      }
+                      return (
+                        <img
+                          key={`${item.id}-attachment-${index}`}
+                          src={src}
+                          alt="attachment"
+                          className="message-attachment"
+                          loading="lazy"
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           );

@@ -1,0 +1,29 @@
+name: Build Universal DMG
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-dmg:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: npm ci
+      - run: npm run build:universal-dmg
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg

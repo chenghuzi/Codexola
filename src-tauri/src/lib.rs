@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use git2::{DiffOptions, Repository, Status, StatusOptions, Tree};
 use tauri::{
@@ -111,6 +111,8 @@ struct AppSettings {
     access_mode: AccessMode,
     bypass_approvals_and_sandbox: bool,
     enable_web_search_request: bool,
+    #[serde(default)]
+    confirm_before_quit: bool,
 }
 
 impl Default for AppSettings {
@@ -120,6 +122,7 @@ impl Default for AppSettings {
             access_mode: AccessMode::Current,
             bypass_approvals_and_sandbox: false,
             enable_web_search_request: false,
+            confirm_before_quit: false,
         }
     }
 }
@@ -188,6 +191,7 @@ struct AppState {
     storage_path: PathBuf,
     settings: Mutex<AppSettings>,
     settings_path: PathBuf,
+    allow_quit: AtomicBool,
 }
 
 impl AppState {
@@ -207,6 +211,7 @@ impl AppState {
             storage_path,
             settings: Mutex::new(settings),
             settings_path,
+            allow_quit: AtomicBool::new(false),
         }
     }
 }
@@ -935,6 +940,13 @@ async fn update_settings(
     Ok(settings)
 }
 
+#[tauri::command]
+async fn confirm_quit(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    state.allow_quit.store(true, Ordering::SeqCst);
+    app.exit(0);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -975,8 +987,31 @@ pub fn run() {
             model_list,
             skills_list,
             get_settings,
-            update_settings
+            update_settings,
+            confirm_quit
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                let state = app_handle.state::<AppState>();
+                if state.allow_quit.load(Ordering::SeqCst) {
+                    return;
+                }
+                let settings = tauri::async_runtime::block_on(async {
+                    state.settings.lock().await.clone()
+                });
+                if !settings.confirm_before_quit {
+                    return;
+                }
+                api.prevent_exit();
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    let _ = window.emit("confirm-quit", ());
+                } else {
+                    let _ = app_handle.emit("confirm-quit", ());
+                }
+            }
+        });
 }

@@ -1,0 +1,38 @@
+.confirm-quit-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.35);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  -webkit-app-region: no-drag;
+}
+
+.confirm-quit-modal {
+  width: min(360px, 90vw);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 24px 60px var(--shadow-strong);
+}
+
+.confirm-quit-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.confirm-quit-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.confirm-quit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}

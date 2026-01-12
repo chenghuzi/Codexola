@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import "./styles/base.css";
 import "./styles/buttons.css";
 import "./styles/sidebar.css";
@@ -11,6 +12,7 @@ import "./styles/diff.css";
 import "./styles/diff-viewer.css";
 import "./styles/debug.css";
 import "./styles/settings.css";
+import "./styles/confirm-quit.css";
 import { Sidebar } from "./components/Sidebar";
 import { Home } from "./components/Home";
 import { MainHeader } from "./components/MainHeader";
@@ -20,6 +22,7 @@ import { Composer } from "./components/Composer";
 import { GitDiffPanel } from "./components/GitDiffPanel";
 import { GitDiffViewer } from "./components/GitDiffViewer";
 import { DebugPanel } from "./components/DebugPanel";
+import { ConfirmQuitModal } from "./components/ConfirmQuitModal";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { useThreads } from "./hooks/useThreads";
 import { useGitStatus } from "./hooks/useGitStatus";
@@ -31,7 +34,7 @@ import { useWorkspaceRefreshOnFocus } from "./hooks/useWorkspaceRefreshOnFocus";
 import { useWorkspaceRestore } from "./hooks/useWorkspaceRestore";
 import { Settings } from "./components/Settings";
 import { useSettings } from "./hooks/useSettings";
-import { saveAttachment } from "./services/tauri";
+import { confirmQuit, saveAttachment } from "./services/tauri";
 import type { AccessMode, ComposerAttachment } from "./types";
 
 type MainAppProps = {
@@ -42,6 +45,7 @@ type MainAppProps = {
 function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
   const [centerMode, setCenterMode] = useState<"chat" | "diff">("chat");
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
+  const [isConfirmQuitOpen, setIsConfirmQuitOpen] = useState(false);
   const {
     debugOpen,
     setDebugOpen,
@@ -140,6 +144,30 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
       });
     };
   }, []);
+
+  useEffect(() => {
+    const subscription = listen("confirm-quit", () => {
+      setIsConfirmQuitOpen(true);
+    });
+    return () => {
+      subscription.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isConfirmQuitOpen) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsConfirmQuitOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isConfirmQuitOpen]);
 
   useEffect(() => {
     clearAttachments();
@@ -282,6 +310,21 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
     );
     clearAttachments();
   }
+
+  const handleConfirmQuit = useCallback(async () => {
+    setIsConfirmQuitOpen(false);
+    try {
+      await confirmQuit();
+    } catch (error) {
+      addDebugEntry({
+        id: `${Date.now()}-confirm-quit-error`,
+        timestamp: Date.now(),
+        source: "error",
+        label: "confirm quit error",
+        payload: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [addDebugEntry]);
 
   return (
     <div className="app">
@@ -444,6 +487,11 @@ function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
           </>
         )}
       </section>
+      <ConfirmQuitModal
+        isOpen={isConfirmQuitOpen}
+        onCancel={() => setIsConfirmQuitOpen(false)}
+        onConfirm={handleConfirmQuit}
+      />
     </div>
   );
 }

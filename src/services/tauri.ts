@@ -135,3 +135,7 @@ export async function getSettings(): Promise<AppSettings> {
 export async function updateSettings(settings: AppSettings): Promise<AppSettings> {
   return invoke<AppSettings>("update_settings", { settings });
 }
+
+export async function confirmQuit(): Promise<void> {
+  return invoke<void>("confirm_quit");
+}

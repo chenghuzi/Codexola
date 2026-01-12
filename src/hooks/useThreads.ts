@@ -38,7 +38,12 @@ type ThreadAction =
   | { type: "markProcessing"; threadId: string; isProcessing: boolean }
   | { type: "markReviewing"; threadId: string; isReviewing: boolean }
   | { type: "markUnread"; threadId: string; hasUnread: boolean }
-  | { type: "addUserMessage"; threadId: string; text: string }
+  | {
+      type: "addUserMessage";
+      threadId: string;
+      text: string;
+      attachments?: LocalImageInput[];
+    }
   | { type: "setThreadName"; workspaceId: string; threadId: string; name: string }
   | { type: "appendAgentDelta"; threadId: string; itemId: string; delta: string }
   | { type: "completeAgentMessage"; threadId: string; itemId: string; text: string }
@@ -196,6 +201,10 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
         kind: "message",
         role: "user",
         text: action.text,
+        attachments:
+          action.attachments && action.attachments.length > 0
+            ? action.attachments
+            : undefined,
       };
       return {
         ...state,
@@ -578,6 +587,22 @@ function userInputsToText(inputs: Array<Record<string, unknown>>) {
     .trim();
 }
 
+function userInputsToAttachments(
+  inputs: Array<Record<string, unknown>>,
+): LocalImageInput[] {
+  const attachments: LocalImageInput[] = [];
+  inputs.forEach((input) => {
+    const type = asString(input.type);
+    if (type === "localImage") {
+      const path = asString((input as Record<string, unknown>).path);
+      if (path) {
+        attachments.push({ path });
+      }
+    }
+  });
+  return attachments;
+}
+
 function buildConversationItemFromThreadItem(
   item: Record<string, unknown>,
 ): ConversationItem | null {
@@ -589,11 +614,17 @@ function buildConversationItemFromThreadItem(
   if (type === "userMessage") {
     const content = Array.isArray(item.content) ? item.content : [];
     const text = userInputsToText(content);
+    const attachments = userInputsToAttachments(content);
+    const tokens = text.split(/\s+/).filter(Boolean);
+    const onlyImageTokens =
+      tokens.length > 0 && tokens.every((token) => token === "[image]");
+    const displayText = attachments.length > 0 && onlyImageTokens ? "" : text;
     return {
       id,
       kind: "message",
       role: "user",
-      text: text || "[message]",
+      text: displayText || (attachments.length > 0 ? "" : "[message]"),
+      attachments: attachments.length > 0 ? attachments : undefined,
     };
   }
   if (type === "agentMessage") {
@@ -1049,15 +1080,15 @@ export function useThreads({
       }
 
       const trimmedText = text.trim();
-      const attachmentText =
-        attachments.length > 0
-          ? attachments.map(() => "[image]").join(" ")
-          : "";
-      const messageText = [trimmedText, attachmentText].filter(Boolean).join(" ");
-      if (!messageText.trim()) {
+      if (!trimmedText && attachments.length === 0) {
         return;
       }
-      dispatch({ type: "addUserMessage", threadId, text: messageText });
+      dispatch({
+        type: "addUserMessage",
+        threadId,
+        text: trimmedText,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
       dispatch({
         type: "setThreadName",
         workspaceId: activeWorkspace.id,
@@ -1078,7 +1109,7 @@ export function useThreads({
         payload: {
           workspaceId: activeWorkspace.id,
           threadId,
-          text: messageText,
+          text: trimmedText,
           attachments: attachments.length,
           model,
           effort,

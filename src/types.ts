@@ -18,7 +18,13 @@ export type Message = {
 };
 
 export type ConversationItem =
-  | { id: string; kind: "message"; role: "user" | "assistant"; text: string }
+  | {
+      id: string;
+      kind: "message";
+      role: "user" | "assistant";
+      text: string;
+      attachments?: LocalImageInput[];
+    }
   | { id: string; kind: "reasoning"; summary: string; content: string }
   | { id: string; kind: "diff"; title: string; diff: string; status?: string }
   | { id: string; kind: "review"; state: "started" | "completed"; text: string }
@@ -66,6 +72,7 @@ export type AppSettings = {
   accessMode: AccessMode;
   bypassApprovalsAndSandbox: boolean;
   enableWebSearchRequest: boolean;
+  confirmBeforeQuit: boolean;
 };
 
 export type ApprovalRequest = {

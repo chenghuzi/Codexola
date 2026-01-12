@@ -99,6 +99,27 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
             </div>
           </div>
           <div className="settings-card">
+            <div className="settings-card-title">Quit behavior</div>
+            <div className="settings-toggle">
+              <input
+                id="confirm-before-quit"
+                type="checkbox"
+                checked={settings.confirmBeforeQuit}
+                onChange={(event) =>
+                  onUpdateSettings({
+                    confirmBeforeQuit: event.target.checked,
+                  })
+                }
+              />
+              <label htmlFor="confirm-before-quit">
+                Confirm before quitting (Cmd+Q)
+              </label>
+            </div>
+            <div className="settings-help">
+              When enabled, quitting the app requires confirmation.
+            </div>
+          </div>
+          <div className="settings-card">
             <div className="settings-card-title">Advanced runtime flags</div>
             <div className="settings-toggle">
               <input
