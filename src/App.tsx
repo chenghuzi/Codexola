@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./styles/base.css";
 import "./styles/buttons.css";
 import "./styles/sidebar.css";
@@ -10,6 +10,7 @@ import "./styles/composer.css";
 import "./styles/diff.css";
 import "./styles/diff-viewer.css";
 import "./styles/debug.css";
+import "./styles/settings.css";
 import { Sidebar } from "./components/Sidebar";
 import { Home } from "./components/Home";
 import { MainHeader } from "./components/MainHeader";
@@ -28,12 +29,18 @@ import { useSkills } from "./hooks/useSkills";
 import { useDebugLog } from "./hooks/useDebugLog";
 import { useWorkspaceRefreshOnFocus } from "./hooks/useWorkspaceRefreshOnFocus";
 import { useWorkspaceRestore } from "./hooks/useWorkspaceRestore";
+import { Settings } from "./components/Settings";
+import { useSettings } from "./hooks/useSettings";
 import type { AccessMode } from "./types";
 
-function App() {
+type MainAppProps = {
+  accessMode: AccessMode;
+  onAccessModeChange: (mode: AccessMode) => void;
+};
+
+function MainApp({ accessMode, onAccessModeChange }: MainAppProps) {
   const [centerMode, setCenterMode] = useState<"chat" | "diff">("chat");
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
-  const [accessMode, setAccessMode] = useState<AccessMode>("current");
   const {
     debugOpen,
     setDebugOpen,
@@ -302,7 +309,7 @@ function App() {
                 selectedEffort={selectedEffort}
                 onSelectEffort={setSelectedEffort}
                 accessMode={accessMode}
-                onSelectAccessMode={setAccessMode}
+                onSelectAccessMode={onAccessModeChange}
                 skills={skills}
               />
             )}
@@ -321,3 +328,30 @@ function App() {
 }
 
 export default App;
+
+function App() {
+  const [route, setRoute] = useState(() => window.location.hash);
+  const { settings, updateSettings } = useSettings();
+
+  useEffect(() => {
+    const handleHashChange = () => setRoute(window.location.hash);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  if (route.startsWith("#/settings")) {
+    return (
+      <Settings
+        settings={settings}
+        onUpdateSettings={updateSettings}
+      />
+    );
+  }
+
+  return (
+    <MainApp
+      accessMode={settings.accessMode}
+      onAccessModeChange={(mode) => updateSettings({ accessMode: mode })}
+    />
+  );
+}

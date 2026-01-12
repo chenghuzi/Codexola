@@ -160,7 +160,8 @@
 
 .file-change-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
   font-size: 11px;
   color: var(--text-secondary);
@@ -175,6 +176,9 @@
 .file-change-path {
   font-size: 12px;
   color: var(--text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .item-output {
