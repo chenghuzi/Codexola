@@ -11,7 +11,7 @@ export function Home({
 }: HomeProps) {
   return (
     <div className="home">
-      <div className="home-title">Codex Monitor</div>
+      <div className="home-title">Codexia</div>
       <div className="home-subtitle">
         Orchestrate agents across your local projects.
       </div>

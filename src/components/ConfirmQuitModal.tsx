@@ -22,7 +22,7 @@ export function ConfirmQuitModal({
         aria-labelledby="confirm-quit-title"
       >
         <div className="confirm-quit-title" id="confirm-quit-title">
-          Quit CodexMonitor?
+          Quit Codexia?
         </div>
         <div className="confirm-quit-body">
           You can keep the app running and return to your sessions later.
