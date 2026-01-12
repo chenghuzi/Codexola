@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   accessMode: "current",
   bypassApprovalsAndSandbox: false,
   enableWebSearchRequest: false,
+  confirmBeforeQuit: false,
 };
 
 function resolveTheme(preference: ThemePreference, prefersDark: boolean) {
