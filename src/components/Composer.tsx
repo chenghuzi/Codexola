@@ -71,7 +71,7 @@ export function Composer({
             if (disabled) {
               return;
             }
-            if (event.key === "Enter" && !event.shiftKey) {
+            if (event.key === "Enter" && event.metaKey) {
               event.preventDefault();
               handleSend();
             }
@@ -82,7 +82,7 @@ export function Composer({
           onClick={handleSend}
           disabled={disabled}
         >
-          Send
+          Send (cmd+enter)
         </button>
       </div>
       <div className="composer-bar">

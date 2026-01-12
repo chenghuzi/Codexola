@@ -21,7 +21,6 @@ import { GitDiffViewer } from "./components/GitDiffViewer";
 import { DebugPanel } from "./components/DebugPanel";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { useThreads } from "./hooks/useThreads";
-import { useWindowDrag } from "./hooks/useWindowDrag";
 import { useGitStatus } from "./hooks/useGitStatus";
 import { useGitDiffs } from "./hooks/useGitDiffs";
 import { useModels } from "./hooks/useModels";
@@ -104,7 +103,6 @@ function App() {
     onMessageActivity: refreshGitStatus,
   });
 
-  useWindowDrag("titlebar");
   useWorkspaceRestore({
     workspaces,
     hasLoaded,
@@ -163,7 +161,6 @@ function App() {
 
   return (
     <div className="app">
-      <div className="drag-strip" id="titlebar" />
       <Sidebar
         workspaces={workspaces}
         threadsByWorkspace={threadsByWorkspace}
@@ -198,11 +195,12 @@ function App() {
 
         {activeWorkspace && (
           <>
-            <div className="main-topbar">
+            <div className="main-topbar" data-tauri-drag-region>
               <div className="main-topbar-left">
                 {centerMode === "diff" && (
                   <button
                     className="ghost icon-button"
+                    data-tauri-drag-region="false"
                     onClick={() => {
                       setCenterMode("chat");
                       setSelectedDiffPath(null);
@@ -221,6 +219,7 @@ function App() {
                 {hasDebugAlerts && (
                   <button
                     className="ghost icon-button"
+                    data-tauri-drag-region="false"
                     onClick={() => setDebugOpen((prev) => !prev)}
                     aria-label="Debug"
                   >

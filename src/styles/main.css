@@ -15,7 +15,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
 }
 
 .workspace-header {
@@ -29,9 +29,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 32px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 14, 20, 0.45);
-  -webkit-app-region: no-drag;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-topbar);
+  -webkit-app-region: drag;
   grid-column: 1;
   grid-row: 1;
 }
@@ -50,8 +50,8 @@
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border-strong);
 }
 
 .workspace-title {
@@ -60,7 +60,7 @@
 }
 
 .workspace-meta {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   font-size: 11px;
   margin-top: 2px;
 }
@@ -85,8 +85,8 @@
   flex-direction: column;
   gap: 12px;
   padding-left: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(9, 12, 20, 0.4);
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-right-panel);
   height: 100%;
   padding-top: 0;
   padding-bottom: 0;

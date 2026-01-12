@@ -1,5 +1,5 @@
 .empty {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
   font-size: 13px;
 }
 
@@ -26,14 +26,14 @@ button:disabled {
 }
 
 .secondary {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--bg-surface-strong);
   color: inherit;
 }
 
 .ghost {
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
 }
 
 .icon-button {
@@ -50,5 +50,5 @@ button:disabled {
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 18px var(--shadow-strong);
 }

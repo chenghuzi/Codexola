@@ -1,15 +1,23 @@
 .sidebar {
   padding: 36px 20px 20px;
-  background: rgba(18, 18, 18, 0.35);
+  background: var(--bg-sidebar);
   backdrop-filter: blur(32px) saturate(1.35);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.sidebar button,
+.sidebar a,
+.sidebar input,
+.sidebar textarea,
+.sidebar [data-tauri-drag-region="false"] {
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-header {
@@ -18,7 +26,7 @@
   align-items: center;
   gap: 12px;
   padding: 0 4px;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
 }
 
 .subtitle {
@@ -31,7 +39,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  -webkit-app-region: no-drag;
 }
 
 .workspace-card {
@@ -53,22 +60,21 @@
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
-  -webkit-app-region: no-drag;
   overflow-x: hidden;
 }
 
 .workspace-row.active {
   background: transparent;
-  border-left: 3px solid rgba(100, 200, 255, 0.8);
+  border-left: 3px solid var(--accent-border);
   padding-left: 9px;
 }
 
 .workspace-row:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-surface-muted);
 }
 
 .workspace-row.active .workspace-name {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 
@@ -80,21 +86,20 @@
 
 .connect {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   align-self: center;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  -webkit-app-region: no-drag;
+  border: 1px solid var(--border-strong);
 }
 
 .workspace-add {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface-faint);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -107,8 +112,8 @@
 }
 
 .workspace-add:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  background: var(--bg-surface-strong);
 }
 
 .sidebar-header:hover .workspace-add,
@@ -137,10 +142,9 @@
   gap: 6px;
   padding: 4px 6px;
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
-  -webkit-app-region: no-drag;
 }
 
 .thread-status {
@@ -152,8 +156,8 @@
 }
 
 .thread-status.processing {
-  background: #ff9f43;
-  box-shadow: 0 0 8px rgba(255, 159, 67, 0.8);
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning-soft);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
@@ -164,23 +168,23 @@
 }
 
 .thread-status.unread {
-  background: #4da3ff;
-  box-shadow: 0 0 8px rgba(77, 163, 255, 0.7);
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-strong);
 }
 
 .thread-status.ready {
-  background: #3fe47e;
-  box-shadow: 0 0 8px rgba(63, 228, 126, 0.5);
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success-soft);
 }
 
 .thread-row:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--bg-surface-faint);
+  color: var(--text-primary);
 }
 
 .thread-row.active {
-  background: rgba(100, 200, 255, 0.14);
-  color: #fff;
+  background: var(--accent-soft);
+  color: var(--text-primary);
 }
 
 .thread-name {
@@ -195,18 +199,17 @@
 .thread-menu-trigger {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
   font-size: 11px;
   padding: 2px 4px;
   cursor: pointer;
-  -webkit-app-region: no-drag;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
 }
 
 .thread-menu-trigger:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .thread-row:hover .thread-menu-trigger {
@@ -217,16 +220,15 @@
 .thread-more {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-faint);
   font-size: 11px;
   text-align: left;
   padding: 2px 6px 2px 16px;
   cursor: pointer;
-  -webkit-app-region: no-drag;
 }
 
 .thread-more:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
 }
 
 @keyframes pulse {

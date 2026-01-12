@@ -62,8 +62,8 @@ export function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
+    <aside className="sidebar" data-tauri-drag-region>
+      <div className="sidebar-header" data-tauri-drag-region>
         <div>
           <div className="subtitle">Workspaces</div>
         </div>
@@ -112,6 +112,7 @@ export function Sidebar({
               {!entry.connected && (
                 <span
                   className="connect"
+                  data-tauri-drag-region="false"
                   onClick={(event) => {
                     event.stopPropagation();
                     onConnectWorkspace(entry);
