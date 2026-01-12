@@ -6,6 +6,7 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  color-scheme: light dark;
   --text-primary: #1b1f2a;
   --text-secondary: #2f3441;
   --text-muted: #5f6675;
