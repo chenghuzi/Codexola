@@ -46,6 +46,15 @@ export type ReviewTarget =
 
 export type AccessMode = "read-only" | "current" | "full-access";
 
+export type ThemePreference = "system" | "light" | "dark";
+
+export type AppSettings = {
+  themePreference: ThemePreference;
+  accessMode: AccessMode;
+  bypassApprovalsAndSandbox: boolean;
+  enableWebSearchRequest: boolean;
+};
+
 export type ApprovalRequest = {
   workspace_id: string;
   request_id: number;

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { WorkspaceInfo } from "../types";
+import type { AppSettings, WorkspaceInfo } from "../types";
 import type { GitFileDiff, GitFileStatus, ReviewTarget } from "../types";
 
 export async function pickWorkspacePath(): Promise<string | null> {
@@ -112,4 +112,12 @@ export async function resumeThread(workspaceId: string, threadId: string) {
 
 export async function archiveThread(workspaceId: string, threadId: string) {
   return invoke<any>("archive_thread", { workspaceId, threadId });
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  return invoke<AppSettings>("get_settings");
+}
+
+export async function updateSettings(settings: AppSettings): Promise<AppSettings> {
+  return invoke<AppSettings>("update_settings", { settings });
 }

@@ -5,7 +5,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use git2::{DiffOptions, Repository, Status, StatusOptions, Tree};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{
+    menu::{Menu, MenuItem, MenuItemKind},
+    AppHandle, Emitter, Manager, State,
+};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{Mutex, oneshot};
@@ -728,10 +731,65 @@ async fn get_git_diffs(
     Ok(results)
 }
 
+#[cfg(target_os = "macos")]
+fn insert_preferences_menu_item<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    menu: &Menu<R>,
+) -> tauri::Result<()> {
+    let preferences_item =
+        MenuItem::with_id(app, "preferences", "Preferences...", true, Some("CmdOrCtrl+,"))?;
+    let app_name = app.package_info().name.clone();
+    let submenu = menu.items()?.into_iter().find_map(|item| match item {
+        MenuItemKind::Submenu(submenu) => match submenu.text() {
+            Ok(text) if text == app_name => Some(submenu),
+            _ => None,
+        },
+        _ => None,
+    });
+    if let Some(submenu) = submenu {
+        submenu.insert(&preferences_item, 1)?;
+    }
+    Ok(())
+}
+
+fn open_settings_window<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    let url = tauri::WebviewUrl::App("index.html#/settings".into());
+    let window = tauri::WebviewWindowBuilder::new(app, "settings", url)
+        .title("Settings")
+        .inner_size(760.0, 520.0)
+        .min_inner_size(680.0, 480.0)
+        .resizable(false)
+        .maximizable(false)
+        .transparent(false)
+        .decorations(true)
+        .title_bar_style(tauri::TitleBarStyle::Visible)
+        .build()
+        .map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .enable_macos_default_menu(true)
+        .menu(|app| {
+            let menu = Menu::default(app)?;
+            #[cfg(target_os = "macos")]
+            insert_preferences_menu_item(app, &menu)?;
+            Ok(menu)
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == "preferences" {
+                let _ = open_settings_window(app);
+            }
+        })
         .setup(|app| {
             let state = AppState::load(&app.handle());
             app.manage(state);

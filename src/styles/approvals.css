@@ -27,6 +27,8 @@
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 8px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .approval-body {
@@ -35,6 +37,8 @@
   color: var(--text-secondary);
   white-space: pre-wrap;
   margin-bottom: 10px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .approval-actions {
