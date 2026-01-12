@@ -15,21 +15,30 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
   return (
     <div className="settings-shell">
       <header className="settings-header" data-tauri-drag-region>
-        <div className="settings-title">Settings</div>
-      </header>
-      <div className="settings-body">
-        <aside className="settings-nav" data-tauri-drag-region="false">
-          <div className="settings-nav-title">Preferences</div>
-          <button className="settings-nav-item is-active" type="button">
+        <nav
+          className="settings-tabs"
+          aria-label="Preferences"
+          role="tablist"
+          aria-orientation="horizontal"
+          data-tauri-drag-region="false"
+        >
+          <button
+            className="settings-tab is-active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+          >
             General
           </button>
-          <button className="settings-nav-item" type="button">
+          <button className="settings-tab" type="button" role="tab">
             Agents
           </button>
-          <button className="settings-nav-item" type="button">
+          <button className="settings-tab" type="button" role="tab">
             Security
           </button>
-        </aside>
+        </nav>
+      </header>
+      <div className="settings-body">
         <main className="settings-panel" data-tauri-drag-region="false">
           <div className="settings-panel-header">
             <div className="settings-panel-title">General</div>
