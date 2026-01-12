@@ -89,6 +89,11 @@ export type AppSettings = {
   confirmBeforeQuit: boolean;
   enableCompletionNotifications: boolean;
   sidebarWidth: number;
+  glassBlurLight: number;
+  glassBlurDark: number;
+  glassOpacityLight: number;
+  glassOpacityDark: number;
+  workspaceSidebarExpanded: Record<string, boolean>;
 };
 
 export type ApprovalRequest = {

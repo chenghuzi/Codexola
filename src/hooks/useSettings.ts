@@ -11,6 +11,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   confirmBeforeQuit: false,
   enableCompletionNotifications: false,
   sidebarWidth: 280,
+  glassBlurLight: 32,
+  glassBlurDark: 32,
+  glassOpacityLight: 1,
+  glassOpacityDark: 1,
+  workspaceSidebarExpanded: {},
 };
 
 function resolveTheme(preference: ThemePreference, prefersDark: boolean) {
@@ -22,6 +27,25 @@ function resolveTheme(preference: ThemePreference, prefersDark: boolean) {
 
 function applyTheme(theme: "light" | "dark") {
   document.documentElement.setAttribute("data-theme", theme);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function applyAppearance(settings: AppSettings, prefersDark: boolean) {
+  const resolved = resolveTheme(settings.themePreference, prefersDark);
+  applyTheme(resolved);
+  const root = document.documentElement;
+  const isDark = resolved === "dark";
+  const blur = isDark ? settings.glassBlurDark : settings.glassBlurLight;
+  const opacity = isDark
+    ? settings.glassOpacityDark
+    : settings.glassOpacityLight;
+  const safeBlur = Math.max(0, blur);
+  const safeOpacity = clamp(opacity, 0, 1);
+  root.style.setProperty("--glass-blur", `${safeBlur}px`);
+  root.style.setProperty("--glass-opacity", `${safeOpacity}`);
 }
 
 export function useSettings() {
@@ -54,8 +78,7 @@ export function useSettings() {
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      const resolved = resolveTheme(settings.themePreference, media.matches);
-      applyTheme(resolved);
+      applyAppearance(settings, media.matches);
     };
     apply();
     if (settings.themePreference === "system") {
@@ -64,7 +87,13 @@ export function useSettings() {
       return () => media.removeEventListener("change", handler);
     }
     return undefined;
-  }, [settings.themePreference]);
+  }, [
+    settings.themePreference,
+    settings.glassBlurLight,
+    settings.glassBlurDark,
+    settings.glassOpacityLight,
+    settings.glassOpacityDark,
+  ]);
 
   useEffect(() => {
     const subscription = listen<AppSettings>("settings-updated", (event) => {

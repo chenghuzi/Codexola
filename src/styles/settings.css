@@ -4,6 +4,7 @@
   grid-template-rows: auto 1fr;
   background: var(--bg-body);
   color: var(--text-primary);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
 }
 
 .settings-header {
@@ -114,6 +115,42 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 12px;
+}
+
+.settings-subsection {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-subsection-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.settings-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-slider {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.settings-slider-value {
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .settings-label {

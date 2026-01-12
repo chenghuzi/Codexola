@@ -258,6 +258,22 @@ fn default_sidebar_width() -> i64 {
     280
 }
 
+fn default_glass_blur_light() -> f64 {
+    32.0
+}
+
+fn default_glass_blur_dark() -> f64 {
+    32.0
+}
+
+fn default_glass_opacity_light() -> f64 {
+    1.0
+}
+
+fn default_glass_opacity_dark() -> f64 {
+    1.0
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct AppSettings {
@@ -271,6 +287,16 @@ struct AppSettings {
     enable_completion_notifications: bool,
     #[serde(default = "default_sidebar_width")]
     sidebar_width: i64,
+    #[serde(default = "default_glass_blur_light")]
+    glass_blur_light: f64,
+    #[serde(default = "default_glass_blur_dark")]
+    glass_blur_dark: f64,
+    #[serde(default = "default_glass_opacity_light")]
+    glass_opacity_light: f64,
+    #[serde(default = "default_glass_opacity_dark")]
+    glass_opacity_dark: f64,
+    #[serde(default)]
+    workspace_sidebar_expanded: HashMap<String, bool>,
 }
 
 impl Default for AppSettings {
@@ -283,6 +309,11 @@ impl Default for AppSettings {
             confirm_before_quit: false,
             enable_completion_notifications: false,
             sidebar_width: default_sidebar_width(),
+            glass_blur_light: default_glass_blur_light(),
+            glass_blur_dark: default_glass_blur_dark(),
+            glass_opacity_light: default_glass_opacity_light(),
+            glass_opacity_dark: default_glass_opacity_dark(),
+            workspace_sidebar_expanded: HashMap::new(),
         }
     }
 }
@@ -1226,7 +1257,7 @@ fn open_settings_window<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<(), Str
         .min_inner_size(680.0, 480.0)
         .resizable(false)
         .maximizable(false)
-        .transparent(false)
+        .transparent(true)
         .decorations(true)
         .title_bar_style(tauri::TitleBarStyle::Visible)
         .build()

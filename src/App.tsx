@@ -53,6 +53,8 @@ type MainAppProps = {
   sidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
   enableCompletionNotifications: boolean;
+  workspaceSidebarExpanded: Record<string, boolean>;
+  onWorkspaceSidebarExpandedChange: (next: Record<string, boolean>) => void;
 };
 
 const SIDEBAR_MIN_WIDTH = 220;
@@ -71,6 +73,8 @@ function MainApp({
   sidebarWidth: persistedSidebarWidth,
   onSidebarWidthChange,
   enableCompletionNotifications,
+  workspaceSidebarExpanded,
+  onWorkspaceSidebarExpandedChange,
 }: MainAppProps) {
   const [centerMode, setCenterMode] = useState<"chat" | "diff">("chat");
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
@@ -179,6 +183,7 @@ function MainApp({
       }) as CSSProperties,
     [sidebarWidth, isResizingSidebar],
   );
+  const expandedWorkspaceIds = workspaceSidebarExpanded ?? {};
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -348,6 +353,18 @@ function MainApp({
 
   openThreadRef.current = handleSelectThread;
 
+  const handleToggleWorkspaceExpanded = useCallback(
+    (workspaceId: string) => {
+      const current = expandedWorkspaceIds[workspaceId];
+      const next = {
+        ...expandedWorkspaceIds,
+        [workspaceId]: !(current ?? true),
+      };
+      onWorkspaceSidebarExpandedChange(next);
+    },
+    [expandedWorkspaceIds, onWorkspaceSidebarExpandedChange],
+  );
+
   async function handleAddAgent(workspace: (typeof workspaces)[number]) {
     exitDiffView();
     setActiveWorkspaceId(workspace.id);
@@ -479,11 +496,9 @@ function MainApp({
         threadStatusById={threadStatusById}
         activeWorkspaceId={activeWorkspaceId}
         activeThreadId={activeThreadId}
+        expandedWorkspaceIds={expandedWorkspaceIds}
+        onToggleWorkspaceExpanded={handleToggleWorkspaceExpanded}
         onAddWorkspace={handleAddWorkspace}
-        onSelectWorkspace={(workspaceId) => {
-          exitDiffView();
-          setActiveWorkspaceId(workspaceId);
-        }}
         onConnectWorkspace={connectWorkspace}
         onAddAgent={handleAddAgent}
         onSelectThread={handleSelectThread}
@@ -682,6 +697,10 @@ function App() {
       sidebarWidth={settings.sidebarWidth}
       onSidebarWidthChange={(width) => updateSettings({ sidebarWidth: width })}
       enableCompletionNotifications={settings.enableCompletionNotifications}
+      workspaceSidebarExpanded={settings.workspaceSidebarExpanded}
+      onWorkspaceSidebarExpandedChange={(next) =>
+        updateSettings({ workspaceSidebarExpanded: next })
+      }
     />
   );
 }

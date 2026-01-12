@@ -13,8 +13,8 @@ type SidebarProps = {
   >;
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
+  expandedWorkspaceIds: Record<string, boolean>;
   onAddWorkspace: () => void;
-  onSelectWorkspace: (id: string) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
   onAddAgent: (workspace: WorkspaceInfo) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
@@ -24,6 +24,7 @@ type SidebarProps = {
     threadId: string,
     archived: boolean,
   ) => void;
+  onToggleWorkspaceExpanded: (workspaceId: string) => void;
 };
 
 export function Sidebar({
@@ -32,15 +33,16 @@ export function Sidebar({
   threadStatusById,
   activeWorkspaceId,
   activeThreadId,
+  expandedWorkspaceIds,
   onAddWorkspace,
-  onSelectWorkspace,
   onConnectWorkspace,
   onAddAgent,
   onSelectThread,
   onRenameThread,
   onArchiveThread,
+  onToggleWorkspaceExpanded,
 }: SidebarProps) {
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState(
+  const [expandedThreadLists, setExpandedThreadLists] = useState(
     new Set<string>(),
   );
   const [expandedArchived, setExpandedArchived] = useState(new Set<string>());
@@ -128,24 +130,25 @@ export function Sidebar({
           const threads = threadsByWorkspace[entry.id] ?? [];
           const activeThreads = threads.filter((thread) => !thread.archived);
           const archivedThreads = threads.filter((thread) => thread.archived);
-          const showAllActive = expandedWorkspaces.has(entry.id);
+          const showAllActive = expandedThreadLists.has(entry.id);
           const visibleActive = showAllActive
             ? activeThreads
             : activeThreads.slice(0, 3);
           const archiveExpanded = expandedArchived.has(entry.id);
+          const workspaceExpanded = expandedWorkspaceIds[entry.id] ?? true;
           return (
             <div key={entry.id} className="workspace-card">
               <div
                 className={`workspace-row ${
                   entry.id === activeWorkspaceId ? "active" : ""
-                }`}
+                } ${workspaceExpanded ? "" : "is-collapsed"}`}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelectWorkspace(entry.id)}
+                onClick={() => onToggleWorkspaceExpanded(entry.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    onSelectWorkspace(entry.id);
+                    onToggleWorkspaceExpanded(entry.id);
                   }
                 }}
               >
@@ -178,7 +181,7 @@ export function Sidebar({
                   </span>
                 )}
               </div>
-              {activeThreads.length > 0 && (
+              {workspaceExpanded && activeThreads.length > 0 && (
                 <div className="thread-list">
                   {visibleActive.map((thread) => {
                     const isRenaming =
@@ -283,7 +286,7 @@ export function Sidebar({
                       className="thread-more"
                       onClick={(event) => {
                         event.stopPropagation();
-                        setExpandedWorkspaces((prev) => {
+                        setExpandedThreadLists((prev) => {
                           const next = new Set(prev);
                           if (next.has(entry.id)) {
                             next.delete(entry.id);
@@ -301,7 +304,7 @@ export function Sidebar({
                   )}
                 </div>
               )}
-              {archivedThreads.length > 0 && (
+              {workspaceExpanded && archivedThreads.length > 0 && (
                 <div className="thread-section">
                   <button
                     className="thread-section-toggle"

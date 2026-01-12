@@ -67,8 +67,111 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
                 <option value="dark">Dark</option>
               </select>
             </div>
+            <div className="settings-subsection">
+              <div className="settings-subsection-title">Light mode glass</div>
+              <div className="settings-field">
+                <label className="settings-label" htmlFor="glass-blur-light">
+                  Frost blur
+                </label>
+                <div className="settings-slider-row">
+                  <input
+                    id="glass-blur-light"
+                    className="settings-slider"
+                    type="range"
+                    min="0"
+                    max="40"
+                    step="1"
+                    value={settings.glassBlurLight}
+                    onChange={(event) =>
+                      onUpdateSettings({
+                        glassBlurLight: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <div className="settings-slider-value">
+                    {Math.round(settings.glassBlurLight)}px
+                  </div>
+                </div>
+              </div>
+              <div className="settings-field">
+                <label className="settings-label" htmlFor="glass-opacity-light">
+                  Opacity
+                </label>
+                <div className="settings-slider-row">
+                  <input
+                    id="glass-opacity-light"
+                    className="settings-slider"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.02"
+                    value={settings.glassOpacityLight}
+                    onChange={(event) =>
+                      onUpdateSettings({
+                        glassOpacityLight: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <div className="settings-slider-value">
+                    {Math.round(settings.glassOpacityLight * 100)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="settings-subsection">
+              <div className="settings-subsection-title">Dark mode glass</div>
+              <div className="settings-field">
+                <label className="settings-label" htmlFor="glass-blur-dark">
+                  Frost blur
+                </label>
+                <div className="settings-slider-row">
+                  <input
+                    id="glass-blur-dark"
+                    className="settings-slider"
+                    type="range"
+                    min="0"
+                    max="40"
+                    step="1"
+                    value={settings.glassBlurDark}
+                    onChange={(event) =>
+                      onUpdateSettings({
+                        glassBlurDark: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <div className="settings-slider-value">
+                    {Math.round(settings.glassBlurDark)}px
+                  </div>
+                </div>
+              </div>
+              <div className="settings-field">
+                <label className="settings-label" htmlFor="glass-opacity-dark">
+                  Opacity
+                </label>
+                <div className="settings-slider-row">
+                  <input
+                    id="glass-opacity-dark"
+                    className="settings-slider"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.02"
+                    value={settings.glassOpacityDark}
+                    onChange={(event) =>
+                      onUpdateSettings({
+                        glassOpacityDark: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <div className="settings-slider-value">
+                    {Math.round(settings.glassOpacityDark * 100)}%
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="settings-help">
-              Changes apply immediately across all windows.
+              Changes apply immediately across all windows. 100% is the most
+              opaque setting.
             </div>
           </div>
           <div className="settings-card">
