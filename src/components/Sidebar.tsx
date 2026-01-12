@@ -44,6 +44,38 @@ export function Sidebar({
     new Set<string>(),
   );
   const [expandedArchived, setExpandedArchived] = useState(new Set<string>());
+  const [renamingThread, setRenamingThread] = useState<{
+    workspaceId: string;
+    threadId: string;
+  } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  function startRename(
+    workspaceId: string,
+    threadId: string,
+    threadName: string,
+  ) {
+    setRenamingThread({ workspaceId, threadId });
+    setRenameValue(threadName);
+  }
+
+  function cancelRename() {
+    setRenamingThread(null);
+    setRenameValue("");
+  }
+
+  function commitRename(
+    workspaceId: string,
+    threadId: string,
+    currentName: string,
+  ) {
+    const trimmed = renameValue.trim();
+    cancelRename();
+    if (!trimmed || trimmed === currentName) {
+      return;
+    }
+    onRenameThread(workspaceId, threadId, trimmed);
+  }
 
   async function showThreadMenu(
     event: React.MouseEvent,
@@ -57,15 +89,7 @@ export function Sidebar({
     const renameItem = await MenuItem.new({
       text: "Rename",
       action: () => {
-        const nextName = globalThis.prompt?.("Rename session", threadName);
-        if (!nextName) {
-          return;
-        }
-        const trimmed = nextName.trim();
-        if (!trimmed || trimmed === threadName) {
-          return;
-        }
-        onRenameThread(workspaceId, threadId, trimmed);
+        startRename(workspaceId, threadId, threadName);
       },
     });
     const archiveItem = await MenuItem.new({
@@ -156,69 +180,104 @@ export function Sidebar({
               </div>
               {activeThreads.length > 0 && (
                 <div className="thread-list">
-                  {visibleActive.map((thread) => (
-                    <div
-                      key={thread.id}
-                      className={`thread-row ${
-                        thread.archived ? "archived" : ""
-                      } ${
-                        entry.id === activeWorkspaceId &&
-                        thread.id === activeThreadId
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() => onSelectThread(entry.id, thread.id)}
-                      onContextMenu={(event) =>
-                        showThreadMenu(
-                          event,
-                          entry.id,
-                          thread.id,
-                          thread.name,
-                          Boolean(thread.archived),
-                        )
-                      }
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          onSelectThread(entry.id, thread.id);
-                        }
-                      }}
-                    >
-                      <span
-                        className={`thread-status ${
-                          threadStatusById[thread.id]?.isReviewing
-                            ? "reviewing"
-                            : threadStatusById[thread.id]?.isProcessing
-                              ? "processing"
-                              : threadStatusById[thread.id]?.hasUnread
-                                ? "unread"
-                                : "ready"
+                  {visibleActive.map((thread) => {
+                    const isRenaming =
+                      renamingThread?.workspaceId === entry.id &&
+                      renamingThread?.threadId === thread.id;
+                    return (
+                      <div
+                        key={thread.id}
+                        className={`thread-row ${
+                          thread.archived ? "archived" : ""
+                        } ${
+                          entry.id === activeWorkspaceId &&
+                          thread.id === activeThreadId
+                            ? "active"
+                            : ""
                         }`}
-                        aria-hidden
-                      />
-                      <span className="thread-name">{thread.name}</span>
-                      <div className="thread-menu">
-                        <button
-                          className="thread-menu-trigger"
-                          aria-label="Thread menu"
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onClick={(event) =>
-                            showThreadMenu(
-                              event,
-                              entry.id,
-                              thread.id,
-                              thread.name,
-                              Boolean(thread.archived),
-                            )
+                        onClick={() => onSelectThread(entry.id, thread.id)}
+                        onContextMenu={(event) =>
+                          showThreadMenu(
+                            event,
+                            entry.id,
+                            thread.id,
+                            thread.name,
+                            Boolean(thread.archived),
+                          )
+                        }
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onSelectThread(entry.id, thread.id);
                           }
-                        >
-                          ...
-                        </button>
+                        }}
+                      >
+                        <span
+                          className={`thread-status ${
+                            threadStatusById[thread.id]?.isReviewing
+                              ? "reviewing"
+                              : threadStatusById[thread.id]?.isProcessing
+                                ? "processing"
+                                : threadStatusById[thread.id]?.hasUnread
+                                  ? "unread"
+                                  : "ready"
+                          }`}
+                          aria-hidden
+                        />
+                        {isRenaming ? (
+                          <input
+                            className="thread-name-input"
+                            value={renameValue}
+                            onChange={(event) =>
+                              setRenameValue(event.target.value)
+                            }
+                            onBlur={() =>
+                              commitRename(entry.id, thread.id, thread.name)
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                commitRename(
+                                  entry.id,
+                                  thread.id,
+                                  thread.name,
+                                );
+                              } else if (event.key === "Escape") {
+                                event.preventDefault();
+                                cancelRename();
+                              }
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            autoFocus
+                            spellCheck={false}
+                          />
+                        ) : (
+                          <span className="thread-name">{thread.name}</span>
+                        )}
+                        <div className="thread-menu">
+                          <button
+                            className="thread-menu-trigger"
+                            aria-label="Thread menu"
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) =>
+                              showThreadMenu(
+                                event,
+                                entry.id,
+                                thread.id,
+                                thread.name,
+                                Boolean(thread.archived),
+                              )
+                            }
+                          >
+                            ...
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {activeThreads.length > 3 && (
                     <button
                       className="thread-more"
@@ -266,67 +325,106 @@ export function Sidebar({
                   </button>
                   {archiveExpanded && (
                     <div className="thread-list">
-                      {archivedThreads.map((thread) => (
-                        <div
-                          key={thread.id}
-                          className={`thread-row archived ${
-                            entry.id === activeWorkspaceId &&
-                            thread.id === activeThreadId
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() => onSelectThread(entry.id, thread.id)}
-                          onContextMenu={(event) =>
-                            showThreadMenu(
-                              event,
-                              entry.id,
-                              thread.id,
-                              thread.name,
-                              Boolean(thread.archived),
-                            )
-                          }
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              onSelectThread(entry.id, thread.id);
-                            }
-                          }}
-                        >
-                          <span
-                            className={`thread-status ${
-                              threadStatusById[thread.id]?.isReviewing
-                                ? "reviewing"
-                                : threadStatusById[thread.id]?.isProcessing
-                                  ? "processing"
-                                  : threadStatusById[thread.id]?.hasUnread
-                                    ? "unread"
-                                    : "ready"
+                      {archivedThreads.map((thread) => {
+                        const isRenaming =
+                          renamingThread?.workspaceId === entry.id &&
+                          renamingThread?.threadId === thread.id;
+                        return (
+                          <div
+                            key={thread.id}
+                            className={`thread-row archived ${
+                              entry.id === activeWorkspaceId &&
+                              thread.id === activeThreadId
+                                ? "active"
+                                : ""
                             }`}
-                            aria-hidden
-                          />
-                          <span className="thread-name">{thread.name}</span>
-                          <div className="thread-menu">
-                            <button
-                              className="thread-menu-trigger"
-                              aria-label="Thread menu"
-                              onMouseDown={(event) => event.stopPropagation()}
-                              onClick={(event) =>
-                                showThreadMenu(
-                                  event,
-                                  entry.id,
-                                  thread.id,
-                                  thread.name,
-                                  Boolean(thread.archived),
-                                )
+                            onClick={() => onSelectThread(entry.id, thread.id)}
+                            onContextMenu={(event) =>
+                              showThreadMenu(
+                                event,
+                                entry.id,
+                                thread.id,
+                                thread.name,
+                                Boolean(thread.archived),
+                              )
+                            }
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onSelectThread(entry.id, thread.id);
                               }
-                            >
-                              ...
-                            </button>
+                            }}
+                          >
+                            <span
+                              className={`thread-status ${
+                                threadStatusById[thread.id]?.isReviewing
+                                  ? "reviewing"
+                                  : threadStatusById[thread.id]?.isProcessing
+                                    ? "processing"
+                                    : threadStatusById[thread.id]?.hasUnread
+                                      ? "unread"
+                                      : "ready"
+                              }`}
+                              aria-hidden
+                            />
+                            {isRenaming ? (
+                              <input
+                                className="thread-name-input"
+                                value={renameValue}
+                                onChange={(event) =>
+                                  setRenameValue(event.target.value)
+                                }
+                                onBlur={() =>
+                                  commitRename(
+                                    entry.id,
+                                    thread.id,
+                                    thread.name,
+                                  )
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    commitRename(
+                                      entry.id,
+                                      thread.id,
+                                      thread.name,
+                                    );
+                                  } else if (event.key === "Escape") {
+                                    event.preventDefault();
+                                    cancelRename();
+                                  }
+                                }}
+                                onClick={(event) => event.stopPropagation()}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                autoFocus
+                                spellCheck={false}
+                              />
+                            ) : (
+                              <span className="thread-name">{thread.name}</span>
+                            )}
+                            <div className="thread-menu">
+                              <button
+                                className="thread-menu-trigger"
+                                aria-label="Thread menu"
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onClick={(event) =>
+                                  showThreadMenu(
+                                    event,
+                                    entry.id,
+                                    thread.id,
+                                    thread.name,
+                                    Boolean(thread.archived),
+                                  )
+                                }
+                              >
+                                ...
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

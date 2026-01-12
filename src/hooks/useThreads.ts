@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
 import type {
   ApprovalRequest,
   ConversationItem,
@@ -789,16 +793,12 @@ export function useThreads({
       return false;
     }
     try {
-      const currentPermission = window.Notification.permission;
-      if (currentPermission === "granted") {
+      const granted = await isPermissionGranted();
+      if (granted) {
         notificationPermissionRef.current = "granted";
         return true;
       }
-      if (currentPermission === "denied") {
-        notificationPermissionRef.current = "denied";
-        return false;
-      }
-      const permission = await window.Notification.requestPermission();
+      const permission = await requestPermission();
       const allowed = permission === "granted";
       notificationPermissionRef.current = allowed ? "granted" : "denied";
       return allowed;

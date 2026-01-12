@@ -259,6 +259,23 @@
   flex: 1;
 }
 
+.thread-name-input {
+  flex: 1;
+  width: 100%;
+  font-size: 12px;
+  background: var(--bg-surface-strong);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.thread-name-input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
 
 .thread-menu {
   position: relative;
