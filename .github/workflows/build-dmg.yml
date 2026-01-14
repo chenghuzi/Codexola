@@ -21,6 +21,44 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Using version: ${VERSION}"
+          export VERSION
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+
+          version = os.environ["VERSION"]
+
+          tauri_conf = "src-tauri/tauri.conf.json"
+          with open(tauri_conf, "r", encoding="utf-8") as f:
+            data = json.load(f)
+          data["version"] = version
+          with open(tauri_conf, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.write("\n")
+
+          package_json = "package.json"
+          with open(package_json, "r", encoding="utf-8") as f:
+            data = json.load(f)
+          data["version"] = version
+          with open(package_json, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.write("\n")
+
+          cargo_toml = "src-tauri/Cargo.toml"
+          with open(cargo_toml, "r", encoding="utf-8") as f:
+            text = f.read()
+          updated = re.sub(r'(?m)^version\\s*=\\s*\"[^\"]+\"', f'version = \"{version}\"', text, count=1)
+          if text == updated:
+            raise SystemExit("Failed to update Cargo.toml version")
+          with open(cargo_toml, "w", encoding="utf-8") as f:
+            f.write(updated)
+          PY
+
       - run: npm ci
       - run: npm run build:universal-dmg
 
