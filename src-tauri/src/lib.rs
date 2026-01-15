@@ -2062,28 +2062,20 @@ async fn validate_codex_bin(path: String) -> Result<(), String> {
         return Err("Codex binary path is required.".to_string());
     }
     let sanitized = trimmed.trim_matches('"').trim_matches('\'');
-    let output = Command::new(sanitized)
-        .arg("--version")
-        .output()
-        .await
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
-        return Ok(());
+    let metadata = fs::metadata(sanitized)
+        .map_err(|e| format!("Codex binary not found: {}", e))?;
+    if !metadata.is_file() {
+        return Err("Codex binary path must point to a file.".to_string());
     }
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let mut detail = Vec::new();
-    if !stdout.trim().is_empty() {
-        detail.push(stdout.trim());
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = metadata.permissions().mode();
+        if mode & 0o111 == 0 {
+            return Err("Codex binary is not executable.".to_string());
+        }
     }
-    if !stderr.trim().is_empty() {
-        detail.push(stderr.trim());
-    }
-    if detail.is_empty() {
-        Err("Codex validation failed.".to_string())
-    } else {
-        Err(format!("Codex validation failed: {}", detail.join(" | ")))
-    }
+    Ok(())
 }
 
 #[tauri::command]
