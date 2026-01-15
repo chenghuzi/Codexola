@@ -21,6 +21,31 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/codexola-signing.keychain-db"
+          KEYCHAIN_PASSWORD="codexola"
+          python3 - <<'PY'
+          import base64, os, pathlib
+          data = base64.b64decode(os.environ["APPLE_CERTIFICATE_P12_BASE64"])
+          pathlib.Path("cert.p12").write_bytes(data)
+          PY
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import cert.p12 -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk '/Developer ID Application/ {print $2; exit}')
+          if [ -n "$IDENTITY" ]; then
+            echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          fi
+
       - name: Sync version from tag
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -60,7 +85,25 @@ jobs:
           PY
 
       - run: npm ci
-      - run: npm run build:universal-dmg
+      - name: Build universal DMG
+        run: npm run build:universal-dmg
+
+      - name: Notarize and staple DMG
+        env:
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, os, pathlib
+          data = base64.b64decode(os.environ["APPLE_API_KEY_P8_BASE64"])
+          pathlib.Path("AuthKey.p8").write_bytes(data)
+          PY
+          DMG=$(ls src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -n1)
+          xcrun notarytool submit "$DMG" --key AuthKey.p8 --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID" --wait
+          xcrun stapler staple "$DMG"
+          spctl -a -vv -t install "$DMG"
 
       - uses: softprops/action-gh-release@v2
         with:
