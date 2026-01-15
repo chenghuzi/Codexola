@@ -116,7 +116,14 @@ export type AppSettings = {
   glassOpacityLight: number;
   glassOpacityDark: number;
   codexBinPath: string | null;
+  nodeBinPath: string | null;
   workspaceSidebarExpanded: Record<string, boolean>;
+};
+
+export type CodexBinInspection = {
+  requiresNode: boolean;
+  suggestedNodePath: string | null;
+  resolvedPath: string;
 };
 
 export type ApprovalRequest = {

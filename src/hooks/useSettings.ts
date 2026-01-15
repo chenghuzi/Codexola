@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   glassOpacityLight: 1,
   glassOpacityDark: 1,
   codexBinPath: null,
+  nodeBinPath: null,
   workspaceSidebarExpanded: {},
 };
 

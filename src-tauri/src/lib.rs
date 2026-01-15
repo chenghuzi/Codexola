@@ -326,6 +326,8 @@ struct AppSettings {
     #[serde(default)]
     codex_bin_path: Option<String>,
     #[serde(default)]
+    node_bin_path: Option<String>,
+    #[serde(default)]
     workspace_sidebar_expanded: HashMap<String, bool>,
 }
 
@@ -346,6 +348,7 @@ impl Default for AppSettings {
             glass_opacity_light: default_glass_opacity_light(),
             glass_opacity_dark: default_glass_opacity_dark(),
             codex_bin_path: None,
+            node_bin_path: None,
             workspace_sidebar_expanded: HashMap::new(),
         }
     }
@@ -1109,7 +1112,29 @@ async fn spawn_workspace_session(
         .clone()
         .or_else(|| settings.codex_bin_path.clone())
         .unwrap_or_else(|| "codex".into());
-    let mut command = Command::new(codex_bin);
+    let codex_path = resolve_binary_path(&codex_bin);
+    let requires_node = read_first_line(&codex_path)
+        .ok()
+        .flatten()
+        .map(|line| shebang_requires_node(&line))
+        .unwrap_or(false);
+    let mut node_bin = settings.node_bin_path.clone();
+    if requires_node && node_bin.is_none() {
+        if let Some(suggested) = suggest_node_path(&codex_path) {
+            node_bin = Some(suggested.to_string_lossy().to_string());
+        }
+    }
+    let mut command = if requires_node {
+        if let Some(node_path) = node_bin {
+            let mut cmd = Command::new(node_path);
+            cmd.arg(codex_path.to_string_lossy().to_string());
+            cmd
+        } else {
+            Command::new(codex_path.to_string_lossy().to_string())
+        }
+    } else {
+        Command::new(codex_path.to_string_lossy().to_string())
+    };
     if settings.bypass_approvals_and_sandbox {
         command.arg("--dangerously-bypass-approvals-and-sandbox");
     }
@@ -2034,6 +2059,64 @@ fn handle_quit_request<R: tauri::Runtime>(app: &AppHandle<R>) {
     }
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CodexBinInspection {
+    requires_node: bool,
+    suggested_node_path: Option<String>,
+    resolved_path: String,
+}
+
+fn is_executable_path(path: &Path) -> bool {
+    let metadata = match fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(_) => return false,
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o111 == 0 {
+            return false;
+        }
+    }
+    true
+}
+
+fn read_first_line(path: &Path) -> Result<Option<String>, String> {
+    let file = fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut reader = StdBufReader::new(file);
+    let mut line = String::new();
+    let bytes = reader.read_line(&mut line).map_err(|e| e.to_string())?;
+    if bytes == 0 {
+        return Ok(None);
+    }
+    Ok(Some(line.trim_end_matches(&['\r', '\n'][..]).to_string()))
+}
+
+fn shebang_requires_node(line: &str) -> bool {
+    if !line.starts_with("#!") {
+        return false;
+    }
+    let shebang = line.trim_start_matches("#!").trim().to_lowercase();
+    shebang.contains("node")
+}
+
+fn resolve_binary_path(raw: &str) -> PathBuf {
+    fs::canonicalize(raw).unwrap_or_else(|_| PathBuf::from(raw))
+}
+
+fn suggest_node_path(codex_path: &Path) -> Option<PathBuf> {
+    let parent = codex_path.parent()?;
+    let candidate = parent.join("node");
+    if is_executable_path(&candidate) {
+        return Some(candidate);
+    }
+    None
+}
+
 #[tauri::command]
 async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
     Ok(state.settings.lock().await.clone())
@@ -2056,23 +2139,48 @@ async fn update_settings(
 }
 
 #[tauri::command]
+async fn inspect_codex_bin(path: String) -> Result<CodexBinInspection, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("Codex binary path is required.".to_string());
+    }
+    let sanitized = trimmed.trim_matches('"').trim_matches('\'');
+    let resolved_path = resolve_binary_path(sanitized);
+    let requires_node = match read_first_line(&resolved_path) {
+        Ok(Some(line)) => shebang_requires_node(&line),
+        _ => false,
+    };
+    let suggested_node_path = if requires_node {
+        suggest_node_path(&resolved_path)
+            .map(|path| path.to_string_lossy().to_string())
+    } else {
+        None
+    };
+    Ok(CodexBinInspection {
+        requires_node,
+        suggested_node_path,
+        resolved_path: resolved_path.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
 async fn validate_codex_bin(path: String) -> Result<(), String> {
     let trimmed = path.trim();
     if trimmed.is_empty() {
         return Err("Codex binary path is required.".to_string());
     }
     let sanitized = trimmed.trim_matches('"').trim_matches('\'');
-    let metadata = fs::metadata(sanitized)
-        .map_err(|e| format!("Codex binary not found: {}", e))?;
+    let metadata =
+        fs::metadata(sanitized).map_err(|e| format!("Binary not found: {}", e))?;
     if !metadata.is_file() {
-        return Err("Codex binary path must point to a file.".to_string());
+        return Err("Binary path must point to a file.".to_string());
     }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mode = metadata.permissions().mode();
         if mode & 0o111 == 0 {
-            return Err("Codex binary is not executable.".to_string());
+            return Err("Binary is not executable.".to_string());
         }
     }
     Ok(())
@@ -2153,6 +2261,7 @@ pub fn run() {
             search_files,
             get_settings,
             update_settings,
+            inspect_codex_bin,
             validate_codex_bin,
             usage_get_snapshot,
             usage_refresh,

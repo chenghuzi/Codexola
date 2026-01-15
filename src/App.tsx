@@ -49,6 +49,8 @@ import { useUsage } from "./hooks/useUsage";
 import {
   confirmQuit,
   pickCodexBinPath,
+  pickNodeBinPath,
+  inspectCodexBin,
   readPrompt,
   saveAttachment,
   validateCodexBin,
@@ -720,20 +722,26 @@ function App() {
   const [codexModalOpen, setCodexModalOpen] = useState(false);
   const [codexModalForced, setCodexModalForced] = useState(false);
   const [codexPathDraft, setCodexPathDraft] = useState("");
+  const [nodePathDraft, setNodePathDraft] = useState("");
+  const [codexRequiresNode, setCodexRequiresNode] = useState(false);
   const [codexTestStatus, setCodexTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [codexTestMessage, setCodexTestMessage] = useState<string | null>(null);
+  const codexInspectRef = useRef(0);
+  const codexValidationRef = useRef(0);
 
   const openCodexModal = useCallback(
     (forced: boolean) => {
       setCodexModalOpen(true);
       setCodexModalForced(forced);
       setCodexPathDraft(settings.codexBinPath ?? "");
+      setNodePathDraft(settings.nodeBinPath ?? "");
+      setCodexRequiresNode(false);
       setCodexTestStatus("idle");
       setCodexTestMessage(null);
     },
-    [settings.codexBinPath],
+    [settings.codexBinPath, settings.nodeBinPath],
   );
 
   const handleRequireCodexBin = useCallback(
@@ -758,6 +766,8 @@ function App() {
       setCodexModalForced(true);
       setCodexModalOpen(true);
       setCodexPathDraft(settings.codexBinPath ?? "");
+      setNodePathDraft(settings.nodeBinPath ?? "");
+      setCodexRequiresNode(false);
       setCodexTestStatus("idle");
       setCodexTestMessage(null);
       return;
@@ -768,8 +778,19 @@ function App() {
     }
   }, [codexModalForced, isLoaded, settings.codexBinPath]);
 
+  const normalizePath = useCallback(
+    (value: string) => value.trim().replace(/^["']|["']$/g, ""),
+    [],
+  );
+
   const handleCodexPathChange = useCallback((value: string) => {
     setCodexPathDraft(value);
+    setCodexTestStatus("idle");
+    setCodexTestMessage(null);
+  }, []);
+
+  const handleNodePathChange = useCallback((value: string) => {
+    setNodePathDraft(value);
     setCodexTestStatus("idle");
     setCodexTestMessage(null);
   }, []);
@@ -784,38 +805,153 @@ function App() {
     setCodexTestMessage(null);
   }, []);
 
-  const handleCodexTest = useCallback(async () => {
-    const normalized = codexPathDraft.trim().replace(/^["']|["']$/g, "");
-    if (!normalized) {
-      setCodexTestStatus("error");
-      setCodexTestMessage("Codex binary path is required.");
+  const handleNodeBrowse = useCallback(async () => {
+    const selection = await pickNodeBinPath();
+    if (!selection) {
       return;
     }
-    setCodexTestStatus("testing");
+    setNodePathDraft(selection);
+    setCodexTestStatus("idle");
     setCodexTestMessage(null);
-    try {
-      await validateCodexBin(normalized);
-      setCodexTestStatus("success");
-      setCodexTestMessage("Validation passed.");
-    } catch (error) {
-      setCodexTestStatus("error");
-      setCodexTestMessage(error instanceof Error ? error.message : String(error));
-    }
-  }, [codexPathDraft]);
+  }, []);
+
+  const runCodexValidation = useCallback(
+    async (requestId?: number) => {
+      const codexPath = normalizePath(codexPathDraft);
+      const nodePath = normalizePath(nodePathDraft);
+      if (!codexPath) {
+        setCodexTestStatus("error");
+        setCodexTestMessage("Codex binary path is required.");
+        return false;
+      }
+      if (codexRequiresNode && !nodePath) {
+        setCodexTestStatus("error");
+        setCodexTestMessage("Node binary path is required.");
+        return false;
+      }
+      setCodexTestStatus("testing");
+      setCodexTestMessage(null);
+      try {
+        await validateCodexBin(codexPath);
+        if (codexRequiresNode) {
+          await validateCodexBin(nodePath);
+        }
+        if (requestId && requestId !== codexValidationRef.current) {
+          return false;
+        }
+        setCodexTestStatus("success");
+        setCodexTestMessage("Validation passed.");
+        return true;
+      } catch (error) {
+        if (requestId && requestId !== codexValidationRef.current) {
+          return false;
+        }
+        setCodexTestStatus("error");
+        setCodexTestMessage(error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [codexPathDraft, nodePathDraft, codexRequiresNode, normalizePath],
+  );
+
+  const handleCodexTest = useCallback(async () => {
+    codexValidationRef.current += 1;
+    const requestId = codexValidationRef.current;
+    await runCodexValidation(requestId);
+  }, [runCodexValidation]);
 
   const handleCodexSave = useCallback(() => {
-    const normalized = codexPathDraft.trim().replace(/^["']|["']$/g, "");
-    if (!normalized || codexTestStatus !== "success") {
+    const normalizedCodex = normalizePath(codexPathDraft);
+    const normalizedNode = normalizePath(nodePathDraft);
+    if (!normalizedCodex || codexTestStatus !== "success") {
       return;
     }
-    updateSettings({ codexBinPath: normalized });
-    setCodexPathDraft(normalized);
+    updateSettings({
+      codexBinPath: normalizedCodex,
+      nodeBinPath: codexRequiresNode
+        ? normalizedNode
+        : settings.nodeBinPath ?? null,
+    });
+    setCodexPathDraft(normalizedCodex);
+    setNodePathDraft(
+      codexRequiresNode ? normalizedNode : settings.nodeBinPath ?? "",
+    );
     setCodexModalOpen(false);
     setCodexModalForced(false);
-  }, [codexPathDraft, codexTestStatus, updateSettings]);
+  }, [
+    codexPathDraft,
+    nodePathDraft,
+    codexRequiresNode,
+    codexTestStatus,
+    normalizePath,
+    settings.nodeBinPath,
+    updateSettings,
+  ]);
 
   const canSaveCodexPath =
     codexTestStatus === "success" && codexPathDraft.trim().length > 0;
+
+  useEffect(() => {
+    if (!codexModalOpen) {
+      return;
+    }
+    const normalizedCodex = normalizePath(codexPathDraft);
+    if (!normalizedCodex) {
+      setCodexRequiresNode(false);
+      return;
+    }
+    codexInspectRef.current += 1;
+    const requestId = codexInspectRef.current;
+    inspectCodexBin(normalizedCodex)
+      .then((result) => {
+        if (requestId !== codexInspectRef.current) {
+          return;
+        }
+        setCodexRequiresNode(result.requiresNode);
+        if (result.requiresNode && result.suggestedNodePath) {
+          setNodePathDraft((prev) =>
+            prev.trim() ? prev : result.suggestedNodePath ?? "",
+          );
+        }
+      })
+      .catch(() => {
+        if (requestId !== codexInspectRef.current) {
+          return;
+        }
+        setCodexRequiresNode(false);
+      });
+  }, [codexModalOpen, codexPathDraft, normalizePath]);
+
+  useEffect(() => {
+    if (!codexModalOpen) {
+      return;
+    }
+    const normalizedCodex = normalizePath(codexPathDraft);
+    const normalizedNode = normalizePath(nodePathDraft);
+    if (!normalizedCodex) {
+      setCodexTestStatus("idle");
+      setCodexTestMessage(null);
+      return;
+    }
+    if (codexRequiresNode && !normalizedNode) {
+      setCodexTestStatus("error");
+      setCodexTestMessage("Node binary path is required.");
+      return;
+    }
+    codexValidationRef.current += 1;
+    const requestId = codexValidationRef.current;
+    const timer = window.setTimeout(() => {
+      void runCodexValidation(requestId);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [
+    codexModalOpen,
+    codexPathDraft,
+    nodePathDraft,
+    codexRequiresNode,
+    normalizePath,
+    runCodexValidation,
+  ]);
 
   const content = route.startsWith("#/settings") ? (
     <Settings
@@ -845,11 +981,15 @@ function App() {
       <CodexPathModal
         isOpen={codexModalOpen}
         path={codexPathDraft}
+        nodePath={nodePathDraft}
+        requiresNode={codexRequiresNode}
         testStatus={codexTestStatus}
         testMessage={codexTestMessage}
         canSave={canSaveCodexPath}
         onChangePath={handleCodexPathChange}
+        onChangeNodePath={handleNodePathChange}
         onBrowse={handleCodexBrowse}
+        onBrowseNode={handleNodeBrowse}
         onTest={handleCodexTest}
         onSave={handleCodexSave}
         onCancel={

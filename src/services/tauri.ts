@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppSettings,
+  CodexBinInspection,
   LocalImageInput,
   UsageSnapshot,
   WorkspaceInfo,
@@ -19,6 +20,14 @@ export async function pickWorkspacePath(): Promise<string | null> {
 }
 
 export async function pickCodexBinPath(): Promise<string | null> {
+  const selection = await open({ directory: false, multiple: false });
+  if (!selection || Array.isArray(selection)) {
+    return null;
+  }
+  return selection;
+}
+
+export async function pickNodeBinPath(): Promise<string | null> {
   const selection = await open({ directory: false, multiple: false });
   if (!selection || Array.isArray(selection)) {
     return null;
@@ -181,6 +190,10 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function updateSettings(settings: AppSettings): Promise<AppSettings> {
   return invoke<AppSettings>("update_settings", { settings });
+}
+
+export async function inspectCodexBin(path: string): Promise<CodexBinInspection> {
+  return invoke<CodexBinInspection>("inspect_codex_bin", { path });
 }
 
 export async function validateCodexBin(path: string): Promise<void> {

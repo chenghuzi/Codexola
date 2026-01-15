@@ -228,6 +228,12 @@ export function Settings({
                 </button>
               </div>
             </div>
+            <div className="settings-field">
+              <label className="settings-label">Node binary path</label>
+              <div className="settings-path">
+                {settings.nodeBinPath?.trim() ? settings.nodeBinPath : "Not set"}
+              </div>
+            </div>
           </div>
           <div className="settings-card">
             <div className="settings-card-title">Quit behavior</div>
