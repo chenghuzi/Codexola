@@ -115,6 +115,7 @@ export type AppSettings = {
   glassBlurDark: number;
   glassOpacityLight: number;
   glassOpacityDark: number;
+  codexBinPath: string | null;
   workspaceSidebarExpanded: Record<string, boolean>;
 };
 

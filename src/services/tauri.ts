@@ -18,6 +18,14 @@ export async function pickWorkspacePath(): Promise<string | null> {
   return selection;
 }
 
+export async function pickCodexBinPath(): Promise<string | null> {
+  const selection = await open({ directory: false, multiple: false });
+  if (!selection || Array.isArray(selection)) {
+    return null;
+  }
+  return selection;
+}
+
 export async function listWorkspaces(): Promise<WorkspaceInfo[]> {
   return invoke<WorkspaceInfo[]>("list_workspaces");
 }
@@ -173,6 +181,10 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function updateSettings(settings: AppSettings): Promise<AppSettings> {
   return invoke<AppSettings>("update_settings", { settings });
+}
+
+export async function validateCodexBin(path: string): Promise<void> {
+  return invoke("validate_codex_bin", { path });
 }
 
 export async function getUsageSnapshot(): Promise<UsageSnapshot> {

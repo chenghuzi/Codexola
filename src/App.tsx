@@ -20,6 +20,7 @@ import "./styles/diff-viewer.css";
 import "./styles/debug.css";
 import "./styles/settings.css";
 import "./styles/confirm-quit.css";
+import "./styles/codex-path.css";
 import { Sidebar } from "./components/Sidebar";
 import { Home } from "./components/Home";
 import { MainHeader } from "./components/MainHeader";
@@ -30,6 +31,7 @@ import { GitDiffPanel } from "./components/GitDiffPanel";
 import { GitDiffViewer } from "./components/GitDiffViewer";
 import { DebugPanel } from "./components/DebugPanel";
 import { ConfirmQuitModal } from "./components/ConfirmQuitModal";
+import { CodexPathModal } from "./components/CodexPathModal";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { useThreads } from "./hooks/useThreads";
 import { useGitStatus } from "./hooks/useGitStatus";
@@ -44,7 +46,13 @@ import { useWorkspaceRestore } from "./hooks/useWorkspaceRestore";
 import { Settings } from "./components/Settings";
 import { useSettings } from "./hooks/useSettings";
 import { useUsage } from "./hooks/useUsage";
-import { confirmQuit, readPrompt, saveAttachment } from "./services/tauri";
+import {
+  confirmQuit,
+  pickCodexBinPath,
+  readPrompt,
+  saveAttachment,
+  validateCodexBin,
+} from "./services/tauri";
 import { buildPromptSlashItems } from "./utils/slash";
 import { expandPromptTemplate, parsePromptInvocation } from "./utils/prompts";
 import type { AccessMode, ComposerAttachment, UsageSnapshot } from "./types";
@@ -58,6 +66,7 @@ type MainAppProps = {
   usageSnapshot: UsageSnapshot | null;
   workspaceSidebarExpanded: Record<string, boolean>;
   onWorkspaceSidebarExpandedChange: (next: Record<string, boolean>) => void;
+  onRequireCodexBin: (message: string) => void;
 };
 
 const SIDEBAR_MIN_WIDTH = 220;
@@ -79,6 +88,7 @@ function MainApp({
   usageSnapshot,
   workspaceSidebarExpanded,
   onWorkspaceSidebarExpandedChange,
+  onRequireCodexBin,
 }: MainAppProps) {
   const [centerMode, setCenterMode] = useState<"chat" | "diff">("chat");
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
@@ -110,7 +120,10 @@ function MainApp({
     markWorkspaceConnected,
     hasLoaded,
     refreshWorkspaces,
-  } = useWorkspaces({ onDebug: addDebugEntry });
+  } = useWorkspaces({
+    onDebug: addDebugEntry,
+    onCodexBinMissing: onRequireCodexBin,
+  });
 
   const { status: gitStatus, refresh: refreshGitStatus } =
     useGitStatus(activeWorkspace);
@@ -702,8 +715,33 @@ export default App;
 
 function App() {
   const [route, setRoute] = useState(() => window.location.hash);
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isLoaded } = useSettings();
   const { snapshot: usageSnapshot } = useUsage(settings);
+  const [codexModalOpen, setCodexModalOpen] = useState(false);
+  const [codexModalForced, setCodexModalForced] = useState(false);
+  const [codexPathDraft, setCodexPathDraft] = useState("");
+  const [codexTestStatus, setCodexTestStatus] = useState<
+    "idle" | "testing" | "success" | "error"
+  >("idle");
+  const [codexTestMessage, setCodexTestMessage] = useState<string | null>(null);
+
+  const openCodexModal = useCallback(
+    (forced: boolean) => {
+      setCodexModalOpen(true);
+      setCodexModalForced(forced);
+      setCodexPathDraft(settings.codexBinPath ?? "");
+      setCodexTestStatus("idle");
+      setCodexTestMessage(null);
+    },
+    [settings.codexBinPath],
+  );
+
+  const handleRequireCodexBin = useCallback(
+    (_message: string) => {
+      openCodexModal(true);
+    },
+    [openCodexModal],
+  );
 
   useEffect(() => {
     const handleHashChange = () => setRoute(window.location.hash);
@@ -711,16 +749,81 @@ function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  if (route.startsWith("#/settings")) {
-    return (
-      <Settings
-        settings={settings}
-        onUpdateSettings={updateSettings}
-      />
-    );
-  }
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+    const hasPath = Boolean(settings.codexBinPath?.trim());
+    if (!hasPath) {
+      setCodexModalForced(true);
+      setCodexModalOpen(true);
+      setCodexPathDraft(settings.codexBinPath ?? "");
+      setCodexTestStatus("idle");
+      setCodexTestMessage(null);
+      return;
+    }
+    if (codexModalForced) {
+      setCodexModalForced(false);
+      setCodexModalOpen(false);
+    }
+  }, [codexModalForced, isLoaded, settings.codexBinPath]);
 
-  return (
+  const handleCodexPathChange = useCallback((value: string) => {
+    setCodexPathDraft(value);
+    setCodexTestStatus("idle");
+    setCodexTestMessage(null);
+  }, []);
+
+  const handleCodexBrowse = useCallback(async () => {
+    const selection = await pickCodexBinPath();
+    if (!selection) {
+      return;
+    }
+    setCodexPathDraft(selection);
+    setCodexTestStatus("idle");
+    setCodexTestMessage(null);
+  }, []);
+
+  const handleCodexTest = useCallback(async () => {
+    const normalized = codexPathDraft.trim().replace(/^["']|["']$/g, "");
+    if (!normalized) {
+      setCodexTestStatus("error");
+      setCodexTestMessage("Codex binary path is required.");
+      return;
+    }
+    setCodexTestStatus("testing");
+    setCodexTestMessage(null);
+    try {
+      await validateCodexBin(normalized);
+      setCodexTestStatus("success");
+      setCodexTestMessage("Validation passed.");
+    } catch (error) {
+      setCodexTestStatus("error");
+      setCodexTestMessage(error instanceof Error ? error.message : String(error));
+    }
+  }, [codexPathDraft]);
+
+  const handleCodexSave = useCallback(() => {
+    const normalized = codexPathDraft.trim().replace(/^["']|["']$/g, "");
+    if (!normalized || codexTestStatus !== "success") {
+      return;
+    }
+    updateSettings({ codexBinPath: normalized });
+    setCodexPathDraft(normalized);
+    setCodexModalOpen(false);
+    setCodexModalForced(false);
+  }, [codexPathDraft, codexTestStatus, updateSettings]);
+
+  const canSaveCodexPath =
+    codexTestStatus === "success" && codexPathDraft.trim().length > 0;
+
+  const content = route.startsWith("#/settings") ? (
+    <Settings
+      settings={settings}
+      onUpdateSettings={updateSettings}
+      onOpenCodexPathModal={() => openCodexModal(false)}
+    />
+  ) : (
     <MainApp
       accessMode={settings.accessMode}
       onAccessModeChange={(mode) => updateSettings({ accessMode: mode })}
@@ -732,6 +835,27 @@ function App() {
       onWorkspaceSidebarExpandedChange={(next) =>
         updateSettings({ workspaceSidebarExpanded: next })
       }
+      onRequireCodexBin={handleRequireCodexBin}
     />
+  );
+
+  return (
+    <>
+      {content}
+      <CodexPathModal
+        isOpen={codexModalOpen}
+        path={codexPathDraft}
+        testStatus={codexTestStatus}
+        testMessage={codexTestMessage}
+        canSave={canSaveCodexPath}
+        onChangePath={handleCodexPathChange}
+        onBrowse={handleCodexBrowse}
+        onTest={handleCodexTest}
+        onSave={handleCodexSave}
+        onCancel={
+          codexModalForced ? undefined : () => setCodexModalOpen(false)
+        }
+      />
+    </>
   );
 }

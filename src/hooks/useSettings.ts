@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   glassBlurDark: 32,
   glassOpacityLight: 1,
   glassOpacityDark: 1,
+  codexBinPath: null,
   workspaceSidebarExpanded: {},
 };
 

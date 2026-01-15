@@ -189,3 +189,25 @@
   font-size: 12px;
   color: var(--text-faint);
 }
+
+.settings-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-path {
+  flex: 1;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

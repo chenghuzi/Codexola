@@ -324,6 +324,8 @@ struct AppSettings {
     #[serde(default = "default_glass_opacity_dark")]
     glass_opacity_dark: f64,
     #[serde(default)]
+    codex_bin_path: Option<String>,
+    #[serde(default)]
     workspace_sidebar_expanded: HashMap<String, bool>,
 }
 
@@ -343,6 +345,7 @@ impl Default for AppSettings {
             glass_blur_dark: default_glass_blur_dark(),
             glass_opacity_light: default_glass_opacity_light(),
             glass_opacity_dark: default_glass_opacity_dark(),
+            codex_bin_path: None,
             workspace_sidebar_expanded: HashMap::new(),
         }
     }
@@ -1096,12 +1099,17 @@ async fn spawn_workspace_session(
     entry: WorkspaceEntry,
     app_handle: AppHandle,
 ) -> Result<Arc<WorkspaceSession>, String> {
-    let mut command = Command::new(entry.codex_bin.clone().unwrap_or_else(|| "codex".into()));
     let settings = {
         let state = app_handle.state::<AppState>();
         let settings = state.settings.lock().await.clone();
         settings
     };
+    let codex_bin = entry
+        .codex_bin
+        .clone()
+        .or_else(|| settings.codex_bin_path.clone())
+        .unwrap_or_else(|| "codex".into());
+    let mut command = Command::new(codex_bin);
     if settings.bypass_approvals_and_sandbox {
         command.arg("--dangerously-bypass-approvals-and-sandbox");
     }
@@ -2048,6 +2056,37 @@ async fn update_settings(
 }
 
 #[tauri::command]
+async fn validate_codex_bin(path: String) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("Codex binary path is required.".to_string());
+    }
+    let sanitized = trimmed.trim_matches('"').trim_matches('\'');
+    let output = Command::new(sanitized)
+        .arg("--version")
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let mut detail = Vec::new();
+    if !stdout.trim().is_empty() {
+        detail.push(stdout.trim());
+    }
+    if !stderr.trim().is_empty() {
+        detail.push(stderr.trim());
+    }
+    if detail.is_empty() {
+        Err("Codex validation failed.".to_string())
+    } else {
+        Err(format!("Codex validation failed: {}", detail.join(" | ")))
+    }
+}
+
+#[tauri::command]
 async fn usage_get_snapshot(state: State<'_, AppState>) -> Result<UsageSnapshot, String> {
     let store = state.usage_store.lock().await;
     Ok(store
@@ -2122,6 +2161,7 @@ pub fn run() {
             search_files,
             get_settings,
             update_settings,
+            validate_codex_bin,
             usage_get_snapshot,
             usage_refresh,
             confirm_quit

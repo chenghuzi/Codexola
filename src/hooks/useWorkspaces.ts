@@ -10,13 +10,27 @@ import {
 
 type UseWorkspacesOptions = {
   onDebug?: (entry: DebugEntry) => void;
+  onCodexBinMissing?: (message: string) => void;
 };
 
 export function useWorkspaces(options: UseWorkspacesOptions = {}) {
   const [workspaces, setWorkspaces] = useState<WorkspaceInfo[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const { onDebug } = options;
+  const { onDebug, onCodexBinMissing } = options;
+
+  function extractErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  function isCodexNotFound(error: unknown) {
+    const message = extractErrorMessage(error).toLowerCase();
+    return (
+      message.includes("no such file or directory") ||
+      message.includes("not found") ||
+      message.includes("os error 2")
+    );
+  }
 
   const refreshWorkspaces = useCallback(async () => {
     try {
@@ -64,6 +78,9 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
       setActiveWorkspaceId(workspace.id);
       return workspace;
     } catch (error) {
+      if (isCodexNotFound(error)) {
+        onCodexBinMissing?.(extractErrorMessage(error));
+      }
       onDebug?.({
         id: `${Date.now()}-client-add-workspace-error`,
         timestamp: Date.now(),
@@ -86,6 +103,9 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     try {
       await connectWorkspaceService(entry.id);
     } catch (error) {
+      if (isCodexNotFound(error)) {
+        onCodexBinMissing?.(extractErrorMessage(error));
+      }
       onDebug?.({
         id: `${Date.now()}-client-connect-workspace-error`,
         timestamp: Date.now(),

@@ -1,0 +1,92 @@
+.codex-path-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.45);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  -webkit-app-region: no-drag;
+}
+
+.codex-path-modal {
+  width: min(560px, 92vw);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  padding: 20px 22px;
+  box-shadow: 0 24px 60px var(--shadow-strong);
+  -webkit-app-region: no-drag;
+}
+
+.codex-path-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.codex-path-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.codex-path-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.codex-path-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.codex-path-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.codex-path-input {
+  flex: 1;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.codex-path-input::placeholder {
+  color: var(--text-faint);
+}
+
+.codex-path-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.codex-path-status {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.codex-path-status.is-success {
+  color: var(--success);
+}
+
+.codex-path-status.is-error {
+  color: var(--danger);
+}
+
+.codex-path-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

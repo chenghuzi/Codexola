@@ -3,6 +3,7 @@ import type { AppSettings, AccessMode, ThemePreference } from "../types";
 type SettingsProps = {
   settings: AppSettings;
   onUpdateSettings: (partial: Partial<AppSettings>) => void;
+  onOpenCodexPathModal: () => void;
 };
 
 const ACCESS_MODE_LABELS: Record<AccessMode, string> = {
@@ -11,7 +12,11 @@ const ACCESS_MODE_LABELS: Record<AccessMode, string> = {
   "full-access": "Full access",
 };
 
-export function Settings({ settings, onUpdateSettings }: SettingsProps) {
+export function Settings({
+  settings,
+  onUpdateSettings,
+  onOpenCodexPathModal,
+}: SettingsProps) {
   return (
     <div className="settings-shell">
       <header className="settings-header" data-tauri-drag-region>
@@ -199,6 +204,29 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
             </div>
             <div className="settings-help">
               New sessions and requests use this access mode by default.
+            </div>
+          </div>
+          <div className="settings-card">
+            <div className="settings-card-title">Codex CLI</div>
+            <div className="settings-card-body">
+              Set the codex binary used to start app-server sessions.
+            </div>
+            <div className="settings-field">
+              <label className="settings-label">Codex binary path</label>
+              <div className="settings-inline">
+                <div className="settings-path">
+                  {settings.codexBinPath?.trim()
+                    ? settings.codexBinPath
+                    : "Not set"}
+                </div>
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={onOpenCodexPathModal}
+                >
+                  {settings.codexBinPath?.trim() ? "Change" : "Set path"}
+                </button>
+              </div>
             </div>
           </div>
           <div className="settings-card">
