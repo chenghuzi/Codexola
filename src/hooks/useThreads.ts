@@ -19,6 +19,7 @@ import type {
 import {
   respondToServerRequest,
   sendUserMessage as sendUserMessageService,
+  cancelTurn as cancelTurnService,
   startReview as startReviewService,
   startThread as startThreadService,
   listThreads as listThreadsService,
@@ -75,7 +76,12 @@ type ThreadState = {
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   threadStatusById: Record<
     string,
-    { isProcessing: boolean; hasUnread: boolean; isReviewing: boolean }
+    {
+      isProcessing: boolean;
+      hasUnread: boolean;
+      isReviewing: boolean;
+      isCanceling: boolean;
+    }
   >;
   approvals: ApprovalRequest[];
 };
@@ -92,6 +98,7 @@ type ThreadAction =
   | { type: "markProcessing"; threadId: string; isProcessing: boolean }
   | { type: "markReviewing"; threadId: string; isReviewing: boolean }
   | { type: "markUnread"; threadId: string; hasUnread: boolean }
+  | { type: "markCanceling"; threadId: string; isCanceling: boolean }
   | {
       type: "addUserMessage";
       threadId: string;
@@ -152,6 +159,8 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
                 hasUnread: false,
                 isReviewing:
                   state.threadStatusById[action.threadId]?.isReviewing ?? false,
+                isCanceling:
+                  state.threadStatusById[action.threadId]?.isCanceling ?? false,
               },
             }
           : state.threadStatusById,
@@ -178,6 +187,7 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
             isProcessing: false,
             hasUnread: false,
             isReviewing: false,
+            isCanceling: false,
           },
         },
         activeThreadIdByWorkspace: {
@@ -212,6 +222,8 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
             hasUnread: state.threadStatusById[action.threadId]?.hasUnread ?? false,
             isReviewing:
               state.threadStatusById[action.threadId]?.isReviewing ?? false,
+            isCanceling:
+              state.threadStatusById[action.threadId]?.isCanceling ?? false,
           },
         },
       };
@@ -225,6 +237,8 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
               state.threadStatusById[action.threadId]?.isProcessing ?? false,
             hasUnread: state.threadStatusById[action.threadId]?.hasUnread ?? false,
             isReviewing: action.isReviewing,
+            isCanceling:
+              state.threadStatusById[action.threadId]?.isCanceling ?? false,
           },
         },
       };
@@ -239,6 +253,23 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
             hasUnread: action.hasUnread,
             isReviewing:
               state.threadStatusById[action.threadId]?.isReviewing ?? false,
+            isCanceling:
+              state.threadStatusById[action.threadId]?.isCanceling ?? false,
+          },
+        },
+      };
+    case "markCanceling":
+      return {
+        ...state,
+        threadStatusById: {
+          ...state.threadStatusById,
+          [action.threadId]: {
+            isProcessing:
+              state.threadStatusById[action.threadId]?.isProcessing ?? false,
+            hasUnread: state.threadStatusById[action.threadId]?.hasUnread ?? false,
+            isReviewing:
+              state.threadStatusById[action.threadId]?.isReviewing ?? false,
+            isCanceling: action.isCanceling,
           },
         },
       };
@@ -1077,6 +1108,7 @@ export function useThreads({
         dispatch({ type: "ensureThread", workspaceId, threadId });
         dispatch({ type: "completeAgentMessage", threadId, itemId, text });
         dispatch({ type: "markProcessing", threadId, isProcessing: false });
+        dispatch({ type: "markCanceling", threadId, isCanceling: false });
         try {
           void onMessageActivity?.();
         } catch {
@@ -1103,6 +1135,7 @@ export function useThreads({
         } else if (itemType === "exitedReviewMode") {
           dispatch({ type: "markReviewing", threadId, isReviewing: false });
           dispatch({ type: "markProcessing", threadId, isProcessing: false });
+          dispatch({ type: "markCanceling", threadId, isCanceling: false });
         }
         const converted = buildConversationItem(item);
         if (converted) {
@@ -1126,6 +1159,7 @@ export function useThreads({
         } else if (itemType === "exitedReviewMode") {
           dispatch({ type: "markReviewing", threadId, isReviewing: false });
           dispatch({ type: "markProcessing", threadId, isProcessing: false });
+          dispatch({ type: "markCanceling", threadId, isCanceling: false });
         }
         const converted = buildConversationItem(item);
         if (converted) {
@@ -1186,10 +1220,17 @@ export function useThreads({
           threadId,
         });
         dispatch({ type: "markProcessing", threadId, isProcessing: true });
+        dispatch({ type: "markCanceling", threadId, isCanceling: false });
       },
       onTurnCompleted: (_workspaceId: string, threadId: string) => {
         dispatch({ type: "markProcessing", threadId, isProcessing: false });
         dispatch({ type: "markReviewing", threadId, isReviewing: false });
+        dispatch({ type: "markCanceling", threadId, isCanceling: false });
+      },
+      onTurnCanceled: (_workspaceId: string, threadId: string) => {
+        dispatch({ type: "markProcessing", threadId, isProcessing: false });
+        dispatch({ type: "markReviewing", threadId, isReviewing: false });
+        dispatch({ type: "markCanceling", threadId, isCanceling: false });
       },
     }),
     [
@@ -1457,6 +1498,7 @@ export function useThreads({
         const nextName = previewThreadName(trimmedText, fallbackName);
         void setDefaultThreadName(activeWorkspace.id, threadId, nextName);
       }
+      dispatch({ type: "markCanceling", threadId, isCanceling: false });
       dispatch({ type: "markProcessing", threadId, isProcessing: true });
       try {
         void onMessageActivity?.();
@@ -1517,6 +1559,47 @@ export function useThreads({
     ],
   );
 
+  const cancelActiveTurn = useCallback(async () => {
+    if (!activeWorkspaceId || !activeThreadId) {
+      return;
+    }
+    const status = state.threadStatusById[activeThreadId];
+    if (!status?.isProcessing || status.isCanceling) {
+      return;
+    }
+    dispatch({ type: "markCanceling", threadId: activeThreadId, isCanceling: true });
+    onDebug?.({
+      id: `${Date.now()}-client-turn-cancel`,
+      timestamp: Date.now(),
+      source: "client",
+      label: "turn/cancel",
+      payload: { workspaceId: activeWorkspaceId, threadId: activeThreadId },
+    });
+    try {
+      const response = await cancelTurnService(activeWorkspaceId, activeThreadId);
+      onDebug?.({
+        id: `${Date.now()}-server-turn-cancel`,
+        timestamp: Date.now(),
+        source: "server",
+        label: "turn/cancel response",
+        payload: response,
+      });
+    } catch (error) {
+      dispatch({
+        type: "markCanceling",
+        threadId: activeThreadId,
+        isCanceling: false,
+      });
+      onDebug?.({
+        id: `${Date.now()}-client-turn-cancel-error`,
+        timestamp: Date.now(),
+        source: "error",
+        label: "turn/cancel error",
+        payload: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [activeThreadId, activeWorkspaceId, onDebug, state.threadStatusById]);
+
   const startReview = useCallback(
     async (text: string) => {
       if (!activeWorkspace || !text.trim()) {
@@ -1533,6 +1616,7 @@ export function useThreads({
       }
 
       const target = parseReviewTarget(text);
+      dispatch({ type: "markCanceling", threadId, isCanceling: false });
       dispatch({ type: "markProcessing", threadId, isProcessing: true });
       dispatch({ type: "markReviewing", threadId, isReviewing: true });
       dispatch({
@@ -1684,6 +1768,7 @@ export function useThreads({
     startThreadForWorkspace,
     listThreadsForWorkspace,
     sendUserMessage,
+    cancelActiveTurn,
     startReview,
     handleApprovalDecision,
   };

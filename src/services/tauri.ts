@@ -80,6 +80,10 @@ export async function sendUserMessage(
   });
 }
 
+export async function cancelTurn(workspaceId: string, threadId: string) {
+  return invoke<any>("cancel_turn", { workspaceId, threadId });
+}
+
 export async function saveAttachment(
   workspaceId: string,
   payload: { bytes: number[]; name?: string | null; mime?: string | null },

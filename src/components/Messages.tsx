@@ -8,9 +8,16 @@ import { languageFromPath } from "../utils/syntax";
 type MessagesProps = {
   items: ConversationItem[];
   isThinking: boolean;
+  isCanceling: boolean;
+  onCancel?: () => void;
 };
 
-export function Messages({ items, isThinking }: MessagesProps) {
+export function Messages({
+  items,
+  isThinking,
+  isCanceling,
+  onCancel,
+}: MessagesProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const seenItems = useRef(new Set<string>());
@@ -35,6 +42,19 @@ export function Messages({ items, isThinking }: MessagesProps) {
     !showAll && items.length > maxVisibleItems
       ? items.slice(-maxVisibleItems)
       : items;
+
+  const streamingMessageId = useMemo(() => {
+    if (!isThinking) {
+      return null;
+    }
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const entry = items[index];
+      if (entry.kind === "message" && entry.role === "assistant") {
+        return entry.id;
+      }
+    }
+    return null;
+  }, [items, isThinking]);
 
   useEffect(() => {
     setOpenItems((prev) => {
@@ -98,28 +118,45 @@ export function Messages({ items, isThinking }: MessagesProps) {
       {visibleItems.map((item) => {
         if (item.kind === "message") {
           const attachments = item.attachments ?? [];
+          const showCancel =
+            Boolean(onCancel) &&
+            isThinking &&
+            item.role === "assistant" &&
+            item.id === streamingMessageId;
           return (
             <div key={item.id} className={`message ${item.role}`}>
-              <div className="bubble">
-                {item.text && <Markdown value={item.text} className="markdown" />}
-                {attachments.length > 0 && (
-                  <div className="message-attachments">
-                    {attachments.map((attachment, index) => {
-                      const src = attachmentSrc(attachment.path);
-                      if (!src) {
-                        return null;
-                      }
-                      return (
-                        <img
-                          key={`${item.id}-attachment-${index}`}
-                          src={src}
-                          alt="attachment"
-                          className="message-attachment"
-                          loading="lazy"
-                        />
-                      );
-                    })}
-                  </div>
+              <div className="message-row">
+                <div className="bubble">
+                  {item.text && <Markdown value={item.text} className="markdown" />}
+                  {attachments.length > 0 && (
+                    <div className="message-attachments">
+                      {attachments.map((attachment, index) => {
+                        const src = attachmentSrc(attachment.path);
+                        if (!src) {
+                          return null;
+                        }
+                        return (
+                          <img
+                            key={`${item.id}-attachment-${index}`}
+                            src={src}
+                            alt="attachment"
+                            className="message-attachment"
+                            loading="lazy"
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {showCancel && (
+                  <button
+                    className="message-cancel"
+                    onClick={onCancel}
+                    disabled={isCanceling}
+                    aria-label="Cancel"
+                  >
+                    {isCanceling ? "Cancelling..." : "Cancel"}
+                  </button>
                 )}
               </div>
             </div>

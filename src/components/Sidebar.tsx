@@ -14,12 +14,18 @@ type SidebarProps = {
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   threadStatusById: Record<
     string,
-    { isProcessing: boolean; hasUnread: boolean; isReviewing: boolean }
+    {
+      isProcessing: boolean;
+      hasUnread: boolean;
+      isReviewing: boolean;
+      isCanceling: boolean;
+    }
   >;
   usageSnapshot: UsageSnapshot | null;
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
   expandedWorkspaceIds: Record<string, boolean>;
+  removingWorkspaceIds: Set<string>;
   onAddWorkspace: () => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
   onAddAgent: (workspace: WorkspaceInfo) => void;
@@ -42,6 +48,7 @@ export function Sidebar({
   activeWorkspaceId,
   activeThreadId,
   expandedWorkspaceIds,
+  removingWorkspaceIds,
   onAddWorkspace,
   onConnectWorkspace,
   onAddAgent,
@@ -139,6 +146,9 @@ export function Sidebar({
   ) {
     event.preventDefault();
     event.stopPropagation();
+    if (removingWorkspaceIds.has(workspace.id)) {
+      return;
+    }
     const removeItem = await MenuItem.new({
       text: "Remove from sidebar",
       action: () => onRemoveWorkspace(workspace),
@@ -175,17 +185,29 @@ export function Sidebar({
             : activeThreads.slice(0, 3);
           const archiveExpanded = expandedArchived.has(entry.id);
           const workspaceExpanded = expandedWorkspaceIds[entry.id] ?? true;
+          const isRemoving = removingWorkspaceIds.has(entry.id);
           return (
             <div key={entry.id} className="workspace-card">
               <div
                 className={`workspace-row ${
                   entry.id === activeWorkspaceId ? "active" : ""
-                } ${workspaceExpanded ? "" : "is-collapsed"}`}
+                } ${workspaceExpanded ? "" : "is-collapsed"}${
+                  isRemoving ? " is-removing" : ""
+                }`}
                 role="button"
                 tabIndex={0}
-                onClick={() => onToggleWorkspaceExpanded(entry.id)}
+                aria-disabled={isRemoving}
+                onClick={() => {
+                  if (isRemoving) {
+                    return;
+                  }
+                  onToggleWorkspaceExpanded(entry.id);
+                }}
                 onContextMenu={(event) => showWorkspaceMenu(event, entry)}
                 onKeyDown={(event) => {
+                  if (isRemoving) {
+                    return;
+                  }
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     onToggleWorkspaceExpanded(entry.id);
@@ -194,11 +216,20 @@ export function Sidebar({
               >
                 <div>
                   <div className="workspace-name-row">
-                    <span className="workspace-name">{entry.name}</span>
+                    <div className="workspace-title">
+                      <span className="workspace-name">{entry.name}</span>
+                      {isRemoving && (
+                        <span className="workspace-status">Removing...</span>
+                      )}
+                    </div>
                     <button
                       className="ghost workspace-add"
+                      disabled={isRemoving}
                       onClick={(event) => {
                         event.stopPropagation();
+                        if (isRemoving) {
+                          return;
+                        }
                         onAddAgent(entry);
                       }}
                       data-tauri-drag-region="false"
@@ -210,10 +241,13 @@ export function Sidebar({
                 </div>
                 {!entry.connected && (
                   <span
-                    className="connect"
+                    className={`connect${isRemoving ? " is-disabled" : ""}`}
                     data-tauri-drag-region="false"
                     onClick={(event) => {
                       event.stopPropagation();
+                      if (isRemoving) {
+                        return;
+                      }
                       onConnectWorkspace(entry);
                     }}
                   >

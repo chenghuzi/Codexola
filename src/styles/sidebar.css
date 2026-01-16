@@ -133,6 +133,15 @@
   background: var(--bg-surface-muted);
 }
 
+.workspace-row.is-removing {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.workspace-row.is-removing:hover {
+  background: transparent;
+}
+
 .workspace-row.active .workspace-name {
   color: var(--text-primary);
 }
@@ -187,6 +196,25 @@
   align-items: center;
   gap: 8px;
   justify-content: space-between;
+}
+
+.workspace-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspace-status {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.connect.is-disabled {
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 

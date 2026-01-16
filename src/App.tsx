@@ -95,6 +95,9 @@ function MainApp({
   const [centerMode, setCenterMode] = useState<"chat" | "diff">("chat");
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
   const [isConfirmQuitOpen, setIsConfirmQuitOpen] = useState(false);
+  const [removingWorkspaceIds, setRemovingWorkspaceIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     clampSidebarWidth(persistedSidebarWidth),
   );
@@ -194,6 +197,7 @@ function MainApp({
     startThreadForWorkspace,
     listThreadsForWorkspace,
     sendUserMessage,
+    cancelActiveTurn,
     startReview,
     handleApprovalDecision,
   } = useThreads({
@@ -413,12 +417,25 @@ function MainApp({
     async (workspace: (typeof workspaces)[number]) => {
       exitDiffView();
       const workspaceId = workspace.id;
-      await removeWorkspace(workspaceId);
-      removeWorkspaceState(workspaceId);
-      if (expandedWorkspaceIds[workspaceId] != null) {
-        const next = { ...expandedWorkspaceIds };
-        delete next[workspaceId];
-        onWorkspaceSidebarExpandedChange(next);
+      setRemovingWorkspaceIds((prev) => {
+        const next = new Set(prev);
+        next.add(workspaceId);
+        return next;
+      });
+      try {
+        await removeWorkspace(workspaceId);
+        removeWorkspaceState(workspaceId);
+        if (expandedWorkspaceIds[workspaceId] != null) {
+          const next = { ...expandedWorkspaceIds };
+          delete next[workspaceId];
+          onWorkspaceSidebarExpandedChange(next);
+        }
+      } finally {
+        setRemovingWorkspaceIds((prev) => {
+          const next = new Set(prev);
+          next.delete(workspaceId);
+          return next;
+        });
       }
     },
     [
@@ -562,6 +579,7 @@ function MainApp({
         activeWorkspaceId={activeWorkspaceId}
         activeThreadId={activeThreadId}
         expandedWorkspaceIds={expandedWorkspaceIds}
+        removingWorkspaceIds={removingWorkspaceIds}
         onToggleWorkspaceExpanded={handleToggleWorkspaceExpanded}
         onAddWorkspace={handleAddWorkspace}
         onConnectWorkspace={connectWorkspace}
@@ -674,6 +692,12 @@ function MainApp({
                       ? threadStatusById[activeThreadId]?.isProcessing ?? false
                       : false
                   }
+                  isCanceling={
+                    activeThreadId
+                      ? threadStatusById[activeThreadId]?.isCanceling ?? false
+                      : false
+                  }
+                  onCancel={cancelActiveTurn}
                 />
               )}
             </div>

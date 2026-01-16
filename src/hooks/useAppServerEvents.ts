@@ -24,6 +24,7 @@ type AppServerEventHandlers = {
   onAppServerEvent?: (event: AppServerEvent) => void;
   onTurnStarted?: (workspaceId: string, threadId: string) => void;
   onTurnCompleted?: (workspaceId: string, threadId: string) => void;
+  onTurnCanceled?: (workspaceId: string, threadId: string) => void;
   onItemStarted?: (workspaceId: string, threadId: string, item: Record<string, unknown>) => void;
   onItemCompleted?: (workspaceId: string, threadId: string, item: Record<string, unknown>) => void;
   onReasoningSummaryDelta?: (workspaceId: string, threadId: string, itemId: string, delta: string) => void;
@@ -90,6 +91,16 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
         const threadId = String(turn?.threadId ?? turn?.thread_id ?? "");
         if (threadId) {
           handlers.onTurnCompleted?.(workspace_id, threadId);
+        }
+        return;
+      }
+
+      if (method === "turn/canceled" || method === "turn/cancelled") {
+        const params = message.params as Record<string, unknown>;
+        const turn = params.turn as Record<string, unknown> | undefined;
+        const threadId = String(turn?.threadId ?? turn?.thread_id ?? "");
+        if (threadId) {
+          handlers.onTurnCanceled?.(workspace_id, threadId);
         }
         return;
       }

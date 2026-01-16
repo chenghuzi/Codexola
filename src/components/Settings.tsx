@@ -175,7 +175,7 @@ export function Settings({
               </div>
             </div>
             <div className="settings-help">
-              Changes apply immediately across all windows. 100% is the most
+              Changes apply immediately to the main window. 100% is the most
               opaque setting.
             </div>
           </div>

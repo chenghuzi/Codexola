@@ -41,6 +41,7 @@ function applyAppearance(settings: AppSettings, prefersDark: boolean) {
   const resolved = resolveTheme(settings.themePreference, prefersDark);
   applyTheme(resolved);
   const root = document.documentElement;
+  const appRoot = document.querySelector<HTMLElement>(".app");
   const isDark = resolved === "dark";
   const blur = isDark ? settings.glassBlurDark : settings.glassBlurLight;
   const opacity = isDark
@@ -48,8 +49,10 @@ function applyAppearance(settings: AppSettings, prefersDark: boolean) {
     : settings.glassOpacityLight;
   const safeBlur = Math.max(0, blur);
   const safeOpacity = clamp(opacity, 0, 1);
-  root.style.setProperty("--glass-blur", `${safeBlur}px`);
-  root.style.setProperty("--glass-opacity", `${safeOpacity}`);
+  if (appRoot) {
+    appRoot.style.setProperty("--glass-blur", `${safeBlur}px`);
+    appRoot.style.setProperty("--glass-opacity", `${safeOpacity}`);
+  }
 }
 
 export function useSettings() {
